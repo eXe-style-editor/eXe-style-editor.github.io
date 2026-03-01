@@ -1030,8 +1030,50 @@ function base64ToBytes(base64) {
   return bytes;
 }
 
+function escapeXmlText(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function defaultConfigXml() {
+  const rawName = String(els.metaName?.value || "").trim();
+  const normalizedName = rawName
+    ? rawName.replace(/[^a-zA-Z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").toLowerCase()
+    : "";
+  const name = normalizedName || "estilo-personalizado";
+  const title = String(els.metaTitle?.value || "").trim() || rawName || "Estilo personalizado";
+  const version = String(els.metaVersion?.value || "").trim() || "1.0";
+  const compatibility = String(els.metaCompatibility?.value || "").trim() || "3.0";
+  const author = String(els.metaAuthor?.value || "").trim() || "Editor de estilos eXeLearning";
+  const license = String(els.metaLicense?.value || "").trim() || "Creative Commons by-sa";
+  const licenseUrl = String(els.metaLicenseUrl?.value || "").trim() || "http://creativecommons.org/licenses/by-sa/3.0/";
+  const description = String(els.metaDescription?.value || "").trim() || "config.xml creado automáticamente por EdEX para completar un estilo incompleto.";
+  const downloadable = els.metaDownloadable?.value === "0" ? "0" : "1";
+
+  return `<?xml version="1.0"?>
+<theme>
+    <name>${escapeXmlText(name)}</name>
+    <title>${escapeXmlText(title)}</title>
+    <version>${escapeXmlText(version)}</version>
+    <compatibility>${escapeXmlText(compatibility)}</compatibility>
+    <author>${escapeXmlText(author)}</author>
+    <license>${escapeXmlText(license)}</license>
+    <license-url>${escapeXmlText(licenseUrl)}</license-url>
+    <description>${escapeXmlText(description)}</description>
+    <downloadable>${downloadable}</downloadable>
+</theme>
+`;
+}
+
 function ensureCoreFilesPresent({ markAsDirty: shouldMarkDirty = false } = {}) {
   const added = [];
+  if (!state.files.has("config.xml")) {
+    state.files.set("config.xml", encode(defaultConfigXml()));
+    invalidateBlob("config.xml");
+    added.push("config.xml");
+  }
   if (!state.files.has("style.js")) {
     state.files.set("style.js", encode(DEFAULT_STYLE_JS));
     invalidateBlob("style.js");
@@ -4333,7 +4375,7 @@ async function syncElpxProjectThemeNameReference() {
 }
 
 function writeConfigField(xml, tag, value) {
-  const escaped = value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const escaped = escapeXmlText(value);
   const pattern = new RegExp(`<${tag}>[\\s\\S]*?<\\/${tag}>`, "i");
   if (pattern.test(xml)) return xml.replace(pattern, `<${tag}>${escaped}</${tag}>`);
   return xml.replace(/<theme>/i, `<theme>\n    <${tag}>${escaped}</${tag}>`);
@@ -4934,8 +4976,31 @@ async function exportElpx() {
   }
   const renameCheck = await ensureElpxRenameForOfficialStyle();
   if (!renameCheck.ok) return;
+  if (state.files.has("style.css")) {
+    const sanitized = sanitizeStyleCss(readCss());
+    state.files.set("style.css", encode(sanitized));
+    invalidateBlob("style.css");
+  }
+  const autoAddedOnExport = ensureCoreFilesPresent({ markAsDirty: false });
+  if (autoAddedOnExport.length) {
+    refreshFileTypeFilterOptions();
+    renderFileList();
+    refreshMetaFields();
+    if (!state.activePath || !state.files.has(state.activePath)) {
+      state.activePath = state.files.has("style.css") ? "style.css" : listFilesSorted()[0] || "";
+    }
+    syncEditorWithActiveFile();
+  }
+  const report = validationReport();
+  if (report.missingCore.length || report.cssIssues.length) {
+    const parts = [];
+    if (report.missingCore.length) parts.push(`faltan obligatorios: ${report.missingCore.join(", ")}`);
+    if (report.cssIssues.length) parts.push(`incidencias CSS: ${report.cssIssues.join(" | ")}`);
+    setStatus(i18nText("status.exportBlocked", `Exportación bloqueada: ${parts.join(" ; ")}`, { details: parts.join(" ; ") }));
+    return;
+  }
   await syncElpxProjectThemeNameReference();
-  await syncThemeFilesToElpxCache();
+  await syncThemeFilesToElpxCache({ replaceTheme: true });
   const zip = new window.JSZip();
   for (const [path, bytes] of state.elpxFiles.entries()) zip.file(path, bytes);
   const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
@@ -4950,10 +5015,14 @@ async function exportElpx() {
     URL.revokeObjectURL(a.href);
     a.remove();
   }, 0);
+  clearDirty();
+  const autoAddedWarning = autoAddedOnExport.length
+    ? i18nText("status.withWarning", ` con aviso: se crearon obligatorios: ${autoAddedOnExport.join(", ")}`, { details: autoAddedOnExport.join(", ") })
+    : "";
   const warning = renameCheck.keptOfficialMetadata
     ? i18nText("status.elpxExportWarningPreviousStyle", " Aviso: en eXeLearning elimina antes el estilo anterior con ese Nombre/Título para poder importarlo.")
     : "";
-  setStatus(i18nText("status.elpxExported", `ELPX exportado correctamente (${state.elpxFiles.size} archivos).${warning}`, { count: state.elpxFiles.size, warning }));
+  setStatus(i18nText("status.elpxExported", `ELPX exportado correctamente (${state.elpxFiles.size} archivos).${warning}${autoAddedWarning}`, { count: state.elpxFiles.size, warning: `${warning}${autoAddedWarning}` }));
 }
 
 function onEditorInput() {

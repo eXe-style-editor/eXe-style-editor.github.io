@@ -456,8 +456,8 @@ const CONTROL_HELP_IDS = [
   "openDetachedEditorBtn"
 ];
 
-const DELIVERY_MODE_BODY_SELECTORS = ["body.exe-web-site", "body.exe-ims", "body.exe-scorm"];
-const DELIVERY_MODE_SCOPE_SELECTORS = [".exe-web-site", ".exe-ims", ".exe-scorm"];
+const DELIVERY_MODE_BODY_SELECTORS = ["body.exe-web-site", "body.exe-ims", "body.exe-scorm", "body.exe-single-page"];
+const DELIVERY_MODE_SCOPE_SELECTORS = [".exe-web-site", ".exe-ims", ".exe-scorm", ".exe-single-page"];
 
 function joinSelectorList(selectors = []) {
   return selectors.filter(Boolean).join(",\n");
@@ -2740,9 +2740,12 @@ function summarizeDefaultWidthConfig(cssText) {
     ".exe-web-site .page-content",
     ".exe-ims .page-content",
     ".exe-scorm .page-content",
+    ".exe-single-page .page-content",
     ".exe-web-site main.page",
     ".exe-ims main.page",
-    ".exe-scorm main.page"
+    ".exe-scorm main.page",
+    ".exe-single-page main.page",
+    ".exe-single-page main.page > section"
   ].map((s) => s.toLowerCase());
   const blockRe = /([^{}]+)\{([^}]*)\}/g;
   let maxWidth = "";
@@ -3583,7 +3586,7 @@ function quickFromCss(cssText) {
     }
     return value;
   };
-  const bodyModeSelectors = ["body.exe-web-site", "body.exe-ims", "body.exe-scorm", "body.exe-export", "body"];
+  const bodyModeSelectors = ["body.exe-web-site", "body.exe-ims", "body.exe-scorm", "body.exe-single-page", "body.exe-export", "body"];
   const contentTypographySelectors = [".exe-content", "#node-content-container.exe-content"];
   const bodyFontSizeRaw = lastRulePropValue(bodyModeSelectors, ["font-size"]);
   const bodyLineHeightRaw = lastRulePropValue(bodyModeSelectors, ["line-height"]);
@@ -3772,6 +3775,9 @@ function quickFromCss(cssText) {
     const contentBgSelectors = [
       ".exe-content",
       ".exe-web-site .exe-content",
+      ".exe-ims .exe-content",
+      ".exe-scorm .exe-content",
+      ".exe-single-page .exe-content",
       "#node-content-container.exe-content"
     ];
     const contentBgRaw = lastRulePropWithUrl(contentBgSelectors, ["background-image", "background"]);
@@ -4215,7 +4221,9 @@ function quickBlockNeedsSchemaMigration(css) {
   const hasWebsiteModeSelectors = /\.(?:exe-web-site)\b/i.test(quickBlock);
   const hasImsModeSelectors = /\.(?:exe-ims)\b/i.test(quickBlock);
   const hasScormModeSelectors = /\.(?:exe-scorm)\b/i.test(quickBlock);
-  const hasMissingDeliveryModes = hasWebsiteModeSelectors && (!hasImsModeSelectors || !hasScormModeSelectors);
+  const hasSinglePageModeSelectors = /\.(?:exe-single-page)\b/i.test(quickBlock);
+  const hasMissingDeliveryModes = hasWebsiteModeSelectors
+    && (!hasImsModeSelectors || !hasScormModeSelectors || !hasSinglePageModeSelectors);
   return hasLegacyEmptyHeader || hasLegacyHeaderContentReset || hasMissingDeliveryModes;
 }
 

@@ -253,6 +253,7 @@ window.$i18n.es = {
   "footer.license": "Licencia AGPLv3",
   "footer.repo": "Repositorio GitHub",
   "footer.issues": "Problemas y sugerencias",
+  "footer.disclaimer": "Proyecto independiente inspirado visualmente en eXeLearning. No esta afiliado ni avalado oficialmente por eXeLearning o INTEF.",
   "quick.titles.summary": "Títulos de página y proyecto",
   "quick.titles.pageSize": "Tamaño título página (rem)",
   "quick.titles.pageWeight": "Peso título página",

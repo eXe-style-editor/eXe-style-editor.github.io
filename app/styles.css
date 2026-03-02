@@ -1170,6 +1170,11 @@ textarea:focus-visible {
   margin: 0;
 }
 
+.app-footer-note {
+  margin-top: 4px;
+  font-size: 0.8rem;
+}
+
 .app-footer a {
   color: inherit;
 }

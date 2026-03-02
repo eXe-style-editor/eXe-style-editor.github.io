@@ -65,3 +65,4 @@ Luego abre `http://localhost:8000`.
 
 - (c) [Juan José de Haro](https://bilateria.org)
 - Licencia: AGPLv3
+- Proyecto independiente inspirado visualmente en eXeLearning. No esta afiliado ni avalado oficialmente por eXeLearning o INTEF.

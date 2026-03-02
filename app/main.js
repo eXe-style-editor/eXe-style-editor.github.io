@@ -369,6 +369,7 @@ const QUICK_DEFAULTS = {
   packageTitleWeight: "400",
   boxTitleSize: 1.5,
   boxTitleGap: 10,
+  compactNoHeaderIdevices: false,
   menuBgColor: "#f6f6f6",
   menuTextColor: "#000000",
   menuActiveBgColor: "#ffffff",
@@ -585,6 +586,8 @@ const els = {
   clickPropPadding: document.getElementById("clickPropPadding"),
   clickApplyInteractiveWrap: document.getElementById("clickApplyInteractiveWrap"),
   clickApplyInteractiveStates: document.getElementById("clickApplyInteractiveStates"),
+  clickCompactNoHeaderWrap: document.getElementById("clickCompactNoHeaderWrap"),
+  clickCompactNoHeader: document.getElementById("clickCompactNoHeader"),
   clickEditApplyBtn: document.getElementById("clickEditApplyBtn"),
   clickEditCancelBtn: document.getElementById("clickEditCancelBtn"),
   exportRenameModal: document.getElementById("exportRenameModal"),
@@ -602,6 +605,7 @@ const els = {
   metaLicenseUrl: document.getElementById("metaLicenseUrl"),
   metaDescription: document.getElementById("metaDescription"),
   metaDownloadable: document.getElementById("metaDownloadable"),
+  compactNoHeaderIdevices: document.getElementById("compactNoHeaderIdevices"),
   addLogoBtn: document.getElementById("addLogoBtn"),
   removeLogoBtn: document.getElementById("removeLogoBtn"),
   addLogoInput: document.getElementById("addLogoInput"),
@@ -2691,6 +2695,7 @@ function quickFromUI({ base = state.quick, onlyKey = "" } = {}) {
   next.packageTitleSize = Math.max(0, Math.min(4, Number(next.packageTitleSize) || QUICK_DEFAULTS.packageTitleSize));
   next.boxTitleSize = Math.max(1, Math.min(2.4, Number(next.boxTitleSize) || QUICK_DEFAULTS.boxTitleSize));
   next.boxTitleGap = Math.max(0, Math.min(28, Number(next.boxTitleGap) || QUICK_DEFAULTS.boxTitleGap));
+  next.compactNoHeaderIdevices = Boolean(next.compactNoHeaderIdevices);
   if (!["inherit", "left", "center", "right", "justify"].includes(next.boxTextAlign)) {
     next.boxTextAlign = QUICK_DEFAULTS.boxTextAlign;
   }
@@ -3089,7 +3094,13 @@ function currentClickEditDeclarations() {
 function renderLiveClickEditPreview() {
   if (!state.elpxMode || !els.clickEditModal || els.clickEditModal.hidden) return;
   const selector = expandedClickEditSelector();
-  if (!selector) {
+  const previewBlocks = [];
+  const showCompactNoHeaderPreview = Boolean(
+    els.clickCompactNoHeaderWrap
+    && !els.clickCompactNoHeaderWrap.hidden
+    && els.clickCompactNoHeader?.checked
+  );
+  if (!selector && !showCompactNoHeaderPreview) {
     removeLiveClickEditPreviewStyle();
     return;
   }
@@ -3099,7 +3110,32 @@ function renderLiveClickEditPreview() {
     if (!value) continue;
     lines.push(`  ${prop}: ${value} !important;`);
   }
-  if (!lines.length) {
+  if (lines.length && selector) {
+    previewBlocks.push(`${selector} {\n${lines.join("\n")}\n}`);
+  }
+  if (showCompactNoHeaderPreview) {
+    previewBlocks.push(`.exe-content .box.no-header header,
+.exe-content .box.no-header .box-head,
+.exe-export .box.no-header header,
+.exe-export .box.no-header .box-head {
+  min-height: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+.exe-content .box.no-header .box-head + .box-content,
+.exe-export .box.no-header .box-head + .box-content,
+.exe-content .box.no-header .box-content,
+.exe-content .box.no-header .iDevice_content,
+.exe-content .box.no-header .iDevice_inner,
+.exe-export .box.no-header .box-content,
+.exe-export .box.no-header .iDevice_content,
+.exe-export .box.no-header .iDevice_inner {
+  padding-top: 0 !important;
+}`);
+  }
+  if (!previewBlocks.length) {
     removeLiveClickEditPreviewStyle();
     return;
   }
@@ -3111,7 +3147,7 @@ function renderLiveClickEditPreview() {
     node.id = "editor-click-live-edit-style";
     doc.head.appendChild(node);
   }
-  node.textContent = `${selector} {\n${lines.join("\n")}\n}\n`;
+  node.textContent = `${previewBlocks.join("\n\n")}\n`;
 }
 
 function openClickEditModal() {
@@ -3281,6 +3317,7 @@ function fillClickEditModalFromElement(el, selector) {
   const bgAlpha = alphaPercentFromColor(computed.backgroundColor, 0);
   const profile = profileForElementSelector(selector);
   const hasText = elementHasVisibleText(el);
+  const isNoHeaderIdevice = Boolean(el.closest(".box.no-header"));
   const allowText = profile.allowText && hasText;
   resetClickEditTouchedFields();
   setClickEditProfile(profile);
@@ -3334,6 +3371,8 @@ function fillClickEditModalFromElement(el, selector) {
   if (els.clickApplyInteractiveStates) {
     els.clickApplyInteractiveStates.checked = canUseInteractiveStates && profile.allowInteractiveStates;
   }
+  if (els.clickCompactNoHeaderWrap) els.clickCompactNoHeaderWrap.hidden = !isNoHeaderIdevice;
+  if (els.clickCompactNoHeader) els.clickCompactNoHeader.checked = Boolean(state.quick.compactNoHeaderIdevices);
 }
 
 function injectClickEditPreviewStyle(doc) {
@@ -3453,6 +3492,16 @@ function applyClickEditChanges() {
     setStatusT("status.noElementSelected", "No hay elemento seleccionado para aplicar cambios.");
     return;
   }
+  let compactUpdated = false;
+  const compactWrapVisible = Boolean(els.clickCompactNoHeaderWrap && !els.clickCompactNoHeaderWrap.hidden);
+  if (compactWrapVisible && els.clickCompactNoHeader) {
+    const nextCompact = Boolean(els.clickCompactNoHeader.checked);
+    if (Boolean(state.quick.compactNoHeaderIdevices) !== nextCompact) {
+      if (els.compactNoHeaderIdevices) els.compactNoHeaderIdevices.checked = nextCompact;
+      applyQuickControls({ showStatus: false, changedKey: "compactNoHeaderIdevices" });
+      compactUpdated = true;
+    }
+  }
   const selector = expandedClickEditSelector();
   const withInteractiveStates = selector.includes(":hover");
   const declarations = currentClickEditDeclarations();
@@ -3461,6 +3510,10 @@ function applyClickEditChanges() {
   state.clickEditIgnoreUntil = Date.now() + 350;
   if (nextCss === css) {
     closeClickEditModal();
+    if (compactUpdated) {
+      setStatusT("status.noHeaderOptimizationUpdated", "Se actualizó la optimización de espacio para iDevices sin título.");
+      return;
+    }
     setStatusT("status.noNewClickChanges", "No había cambios nuevos para aplicar.");
     return;
   }
@@ -3736,6 +3789,15 @@ function quickFromCss(cssText) {
       || matchValue(/\.exe-content \.box-title,\s*[\s\S]*?\.exe-content \.iDeviceTitle\s*\{[\s\S]*?color:\s*([^;]+);/i, q.boxTitleColor),
     q.boxTitleColor
   );
+  const noHeaderMeta = cssText.match(/\/\*\s*no-header-editor:compact=(0|1)\s*\*\//i);
+  if (noHeaderMeta) {
+    q.compactNoHeaderIdevices = noHeaderMeta[1] === "1";
+  } else {
+    const quickBlock = getQuickBlock(cssText);
+    if (/\.box\.no-header\s+\.box-head[\s\S]*?min-height:\s*0/i.test(quickBlock)) {
+      q.compactNoHeaderIdevices = true;
+    }
+  }
   const boxTextAlignRaw = lastRulePropValue([".exe-content .box-content", ".exe-content .iDevice_inner", ".exe-content .iDevice_content"], ["text-align"]);
   if (["left", "center", "right", "justify", "inherit"].includes(String(boxTextAlignRaw).toLowerCase())) {
     q.boxTextAlign = String(boxTextAlignRaw).toLowerCase();
@@ -3969,6 +4031,30 @@ function buildQuickCss({ important = true } = {}) {
   ]);
   const headerTitleSelectors = modeScopedSelectors(["#headerContent", ".package-header .package-title"]);
   const footerImageSelectors = modeScopedSelectors(["#siteFooter", "#siteFooterContent"]);
+  const noHeaderHeaderSelectors = joinSelectorList([
+    modeScopedSelectors(".box.no-header header"),
+    modeScopedSelectors(".box.no-header .box-head"),
+    ".exe-export .box.no-header header",
+    ".exe-export .box.no-header .box-head",
+    ".exe-content .box.no-header header",
+    ".exe-content .box.no-header .box-head"
+  ]);
+  const noHeaderSiblingContentSelectors = joinSelectorList([
+    modeScopedSelectors(".box.no-header .box-head + .box-content"),
+    ".exe-export .box.no-header .box-head + .box-content",
+    ".exe-content .box.no-header .box-head + .box-content"
+  ]);
+  const noHeaderContentSelectors = joinSelectorList([
+    modeScopedSelectors(".box.no-header .box-content"),
+    modeScopedSelectors(".box.no-header .iDevice_content"),
+    modeScopedSelectors(".box.no-header .iDevice_inner"),
+    ".exe-export .box.no-header .box-content",
+    ".exe-export .box.no-header .iDevice_content",
+    ".exe-export .box.no-header .iDevice_inner",
+    ".exe-content .box.no-header .box-content",
+    ".exe-content .box.no-header .iDevice_content",
+    ".exe-content .box.no-header .iDevice_inner"
+  ]);
   const logoPath = q.logoPath && state.files.has(q.logoPath) ? q.logoPath : "";
   const bgImagePath = q.bgImagePath && state.files.has(q.bgImagePath) ? q.bgImagePath : "";
   const headerImagePath = q.headerImagePath && state.files.has(q.headerImagePath) ? q.headerImagePath : "";
@@ -3985,6 +4071,7 @@ function buildQuickCss({ important = true } = {}) {
   const bgMeta = `/* bg-editor:path=${bgImagePath};enabled=${q.bgImageEnabled ? "1" : "0"};repeat=${q.bgImageRepeat};soft=${Math.max(0, Math.min(90, Number(q.bgImageSoftness) || QUICK_DEFAULTS.bgImageSoftness))} */`;
   const headerMeta = `/* header-image-editor:path=${headerImagePath};enabled=${q.headerImageEnabled ? "1" : "0"};hide=${q.headerHideTitle ? "1" : "0"};height=${q.headerImageHeight};fit=${q.headerImageFit};pos=${q.headerImagePosition};repeat=${q.headerImageRepeat} */`;
   const footerMeta = `/* footer-image-editor:path=${footerImagePath};enabled=${q.footerImageEnabled ? "1" : "0"};height=${q.footerImageHeight};fit=${q.footerImageFit};pos=${q.footerImagePosition};repeat=${q.footerImageRepeat} */`;
+  const noHeaderMeta = `/* no-header-editor:compact=${q.compactNoHeaderIdevices ? "1" : "0"} */`;
   const navIconsMeta = `/* nav-icons-editor:prev=${navPrevIconPath};next=${navNextIconPath};menu=${navMenuIconPath} */`;
   const logoRule = q.logoEnabled && logoPath
     ? `
@@ -4039,6 +4126,23 @@ ${footerImageSelectors} {
 }
 `
     : "";
+  const compactNoHeaderRule = q.compactNoHeaderIdevices
+    ? `
+${noHeaderHeaderSelectors} {
+  min-height: 0${bang};
+  margin-top: 0${bang};
+  margin-bottom: 0${bang};
+  padding-top: 0${bang};
+  padding-bottom: 0${bang};
+}
+${noHeaderSiblingContentSelectors} {
+  padding-top: 0${bang};
+}
+${noHeaderContentSelectors} {
+  padding-top: 0${bang};
+}
+`
+    : "";
   const navPrevIconRule = navPrevIconPath
     ? `
 ${modeScopedSelectors([".nav-buttons .nav-button-left"])} {
@@ -4069,6 +4173,7 @@ ${widthMeta}
 ${bgMeta}
 ${headerMeta}
 ${footerMeta}
+${noHeaderMeta}
 ${navIconsMeta}
 ${bodyModeSelectors} {
   background-color: ${effectivePageBgColor}${bang};
@@ -4162,11 +4267,79 @@ ${layoutWidthSelectors} {
 ${headerImageRule}
 ${headerHideTitleRule}
 ${footerImageRule}
+${compactNoHeaderRule}
 ${navPrevIconRule}
 ${navNextIconRule}
 ${navMenuIconRule}
 ${logoRule}
 `;
+}
+
+function stripCompactNoHeaderQuickChunk(text) {
+  let next = String(text || "");
+  next = next.replace(/\/\*\s*no-header-editor:compact=(0|1)\s*\*\/\s*/gi, "");
+  next = next.replace(/\/\*\s*no-header-compact:start\s*\*\/[\s\S]*?\/\*\s*no-header-compact:end\s*\*\/\s*/gi, "");
+  for (const token of [
+    ".box.no-header header",
+    ".box.no-header .box-head",
+    ".box.no-header .box-head + .box-content",
+    ".box.no-header .box-content",
+    ".box.no-header .iDevice_content",
+    ".box.no-header .iDevice_inner"
+  ]) {
+    const escaped = token
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      .replace(/\\\./g, "\\.");
+    const ruleRe = new RegExp(`[^{}]*${escaped}[^{}]*\\{[^{}]*\\}\\s*`, "gi");
+    next = next.replace(ruleRe, "");
+  }
+  return next.trim();
+}
+
+function buildCompactNoHeaderQuickChunk({ enabled = false, important = false } = {}) {
+  const bang = important ? " !important" : "";
+  const headerSelectors = joinSelectorList([
+    modeScopedSelectors(".box.no-header header"),
+    modeScopedSelectors(".box.no-header .box-head"),
+    ".exe-export .box.no-header header",
+    ".exe-export .box.no-header .box-head",
+    ".exe-content .box.no-header header",
+    ".exe-content .box.no-header .box-head"
+  ]);
+  const siblingContentSelectors = joinSelectorList([
+    modeScopedSelectors(".box.no-header .box-head + .box-content"),
+    ".exe-export .box.no-header .box-head + .box-content",
+    ".exe-content .box.no-header .box-head + .box-content"
+  ]);
+  const contentSelectors = joinSelectorList([
+    modeScopedSelectors(".box.no-header .box-content"),
+    modeScopedSelectors(".box.no-header .iDevice_content"),
+    modeScopedSelectors(".box.no-header .iDevice_inner"),
+    ".exe-export .box.no-header .box-content",
+    ".exe-export .box.no-header .iDevice_content",
+    ".exe-export .box.no-header .iDevice_inner",
+    ".exe-content .box.no-header .box-content",
+    ".exe-content .box.no-header .iDevice_content",
+    ".exe-content .box.no-header .iDevice_inner"
+  ]);
+  const rules = enabled
+    ? `
+${headerSelectors} {
+  min-height: 0${bang};
+  margin-top: 0${bang};
+  margin-bottom: 0${bang};
+  padding-top: 0${bang};
+  padding-bottom: 0${bang};
+}
+${siblingContentSelectors} {
+  padding-top: 0${bang};
+}
+${contentSelectors} {
+  padding-top: 0${bang};
+}
+`.trim()
+    : "";
+  return `/* no-header-editor:compact=${enabled ? "1" : "0"} */\n/* no-header-compact:start */\n${rules}\n/* no-header-compact:end */`.trim();
 }
 
 function stripQuickBlock(css) {
@@ -4237,8 +4410,11 @@ function auditStyleCss(css) {
 function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
   const key = String(changedKey || "").trim();
   if (key) {
+    const baseValues = key === "compactNoHeaderIdevices"
+      ? state.quick
+      : quickFromPreviewSnapshot(quickFromCss(readCss()));
     state.quick = quickFromUI({
-      base: quickFromPreviewSnapshot(quickFromCss(readCss())),
+      base: baseValues,
       onlyKey: key
     });
   } else {
@@ -4246,6 +4422,22 @@ function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
   }
   updateContentWidthControls(state.quick);
   applyEditorTheme();
+  if (key === "compactNoHeaderIdevices") {
+    const currentCss = readCss();
+    const baseCss = stripQuickBlock(currentCss);
+    const currentQuick = getQuickBlock(currentCss);
+    const quickWithoutCompact = stripCompactNoHeaderQuickChunk(currentQuick);
+    const compactChunk = buildCompactNoHeaderQuickChunk({
+      enabled: Boolean(state.quick.compactNoHeaderIdevices),
+      important: false
+    });
+    const quickCss = [quickWithoutCompact, compactChunk].filter(Boolean).join("\n\n").trim();
+    const css = `${baseCss}\n\n/* quick-overrides:start */\n${quickCss}\n/* quick-overrides:end */\n`;
+    writeCss(css);
+    markDirty();
+    if (showStatus) setStatusT("status.quickApplied", "Ajustes rápidos volcados en style.css");
+    return;
+  }
   const baseCss = stripQuickBlock(readCss());
   const quickCss = buildQuickCss({ important: false });
   const cleanedBaseCss = pruneClickOverridesConflicts(baseCss, quickCss);
@@ -5669,6 +5861,11 @@ function setupEvents() {
     };
     input.addEventListener("input", onInput);
     input.addEventListener("change", onInput);
+  }
+  if (els.clickCompactNoHeader) {
+    const onToggleCompactNoHeader = () => renderLiveClickEditPreview();
+    els.clickCompactNoHeader.addEventListener("input", onToggleCompactNoHeader);
+    els.clickCompactNoHeader.addEventListener("change", onToggleCompactNoHeader);
   }
   // No cerrar por clic en el fondo: evita cierres accidentales al arrastrar.
   document.addEventListener("keydown", (ev) => {

@@ -10,7 +10,7 @@
 </head>
 <body>
   <div id="trialNotice" class="trial-notice" role="status" aria-live="polite">
-    <p><strong data-i18n="trial.notice.strong">Editor de estilos en fase de pruebas.</strong> <span data-i18n="trial.notice.text">Verifica siempre el resultado final en eXeLearning antes de publicarlo o compartirlo.</span></p>
+    <p><strong data-i18n="trial.notice.strong">Editor de estilos en fase de pruebas.</strong> <span data-i18n="trial.notice.text">Verifica siempre el resultado final antes de publicarlo o compartirlo. La modificacion de los estilos puede tener efectos inesperados.</span></p>
     <button id="dismissTrialNotice" type="button" aria-label="Cerrar aviso" data-i18n-aria-label="trial.notice.close">×</button>
   </div>
   <div id="appShell" class="app-shell">
@@ -262,6 +262,13 @@
                 <span class="toggle-visual"></span>
               </span>
               <label class="toggle-label" for="pageTitleUppercase" data-i18n="quick.titles.pageUppercase">Título de página en mayúsculas</label>
+            </div>
+            <div class="toggle-item">
+              <span class="toggle-control">
+                <input id="compactNoHeaderIdevices" data-quick="compactNoHeaderIdevices" class="toggle-input" type="checkbox" />
+                <span class="toggle-visual"></span>
+              </span>
+              <label class="toggle-label" for="compactNoHeaderIdevices" data-i18n="quick.titles.compactNoHeader">Reducir el espacio superior en iDevices sin título</label>
             </div>
           </div>
         </details>
@@ -636,6 +643,13 @@
         </span>
         <label class="toggle-label" for="clickApplyInteractiveStates" data-i18n="clickEdit.applyInteractive">Aplicar también al pasar el ratón o al hacer clic</label>
       </div>
+      <div id="clickCompactNoHeaderWrap" class="toggle-item click-edit-toggle" hidden>
+        <span class="toggle-control">
+          <input id="clickCompactNoHeader" class="toggle-input" type="checkbox" />
+          <span class="toggle-visual"></span>
+        </span>
+        <label class="toggle-label" for="clickCompactNoHeader" data-i18n="clickEdit.compactNoHeader">Reducir el espacio superior en iDevices sin título</label>
+      </div>
       <div class="button-row click-edit-actions">
         <button id="clickEditApplyBtn" type="button">
           <span class="inline-icon material-symbols-outlined" aria-hidden="true">check</span><span data-i18n="clickEdit.apply">Aplicar cambios</span>
@@ -670,7 +684,7 @@
     </div>
   </div>
   <footer class="app-footer">
-    <p>v 1.0.0-beta.7 · © <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">Licencia AGPLv3</a> · <a href="https://github.com/jjdeharo/editor-estilos" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">Repositorio GitHub</a> · <a href="https://github.com/jjdeharo/editor-estilos/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Problemas y sugerencias</a></p>
+    <p>v 1.0.0-beta.8 · © <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">Licencia AGPLv3</a> · <a href="https://github.com/jjdeharo/editor-estilos" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">Repositorio GitHub</a> · <a href="https://github.com/jjdeharo/editor-estilos/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Problemas y sugerencias</a></p>
     <p class="app-footer-note" data-i18n="footer.disclaimer">Proyecto independiente inspirado visualmente en eXeLearning. No esta afiliado ni avalado oficialmente por eXeLearning o INTEF.</p>
   </footer>
 

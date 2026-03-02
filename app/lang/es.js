@@ -2,7 +2,7 @@ window.$i18n = window.$i18n || {};
 window.$i18n.es = {
   "app.title": "EdEX",
   "trial.notice.strong": "Editor de estilos en fase de pruebas.",
-  "trial.notice.text": "Verifica siempre el resultado final antes de publicarlo o compartirlo. La modificacion de los estilos puede tener efectos inesperados.",
+  "trial.notice.text": "Verifica siempre el resultado final antes de publicarlo o compartirlo. Puedes informar sobre problemas o sugerencias en el enlace que tienes en la parte inferior.",
   "trial.notice.close": "Cerrar aviso",
   "header.title": "EdEX",
   "header.subtitle": "Editor de estilos de eXeLearning",

@@ -4383,6 +4383,16 @@ function sanitizeStyleCss(css) {
   );
 }
 
+function upsertExportSignature(css) {
+  const signature = "/* created-with: EdEX */";
+  const withoutSignature = String(css || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/(^|\n)\s*\/\*\s*created-with:\s*(?:editor-estilos|EdEX)\s*\*\/\s*(?=\n|$)/gi, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trimEnd();
+  return `${withoutSignature}\n\n${signature}\n`;
+}
+
 function auditStyleCss(css) {
   const issues = [];
   const quickBlock = getQuickBlock(css);
@@ -5101,7 +5111,8 @@ async function exportZip() {
 
   if (state.files.has("style.css")) {
     const sanitized = sanitizeStyleCss(readCss());
-    state.files.set("style.css", encode(sanitized));
+    const signed = upsertExportSignature(sanitized);
+    state.files.set("style.css", encode(signed));
     invalidateBlob("style.css");
   }
   if (state.files.has("style.js")) {
@@ -5170,7 +5181,8 @@ async function exportElpx() {
   if (!renameCheck.ok) return;
   if (state.files.has("style.css")) {
     const sanitized = sanitizeStyleCss(readCss());
-    state.files.set("style.css", encode(sanitized));
+    const signed = upsertExportSignature(sanitized);
+    state.files.set("style.css", encode(signed));
     invalidateBlob("style.css");
   }
   const autoAddedOnExport = ensureCoreFilesPresent({ markAsDirty: false });

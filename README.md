@@ -1,5 +1,7 @@
 # Editor de estilos para eXeLearning
 
+> Repositorio histórico. El repositorio canónico y la URL pública actual son `eXe-style-editor/eXe-style-editor.github.io` y `https://eXe-style-editor.github.io/`.
+
 Editor web para crear, ajustar y exportar estilos (`.zip`) compatibles con eXeLearning.
 
 Versión actual: `v 1.0.0-beta.11`

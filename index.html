@@ -4,6 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EdEX</title>
+  <script>
+    (function () {
+      const oldHost = "jjdeharo.github.io";
+      const oldBase = "/editor-estilos";
+      const newOrigin = "https://exe-style-editor.github.io";
+      if (window.location.hostname !== oldHost) return;
+      if (!window.location.pathname.startsWith(oldBase)) return;
+      const suffix = window.location.pathname.slice(oldBase.length) || "/";
+      const target = new URL(suffix, `${newOrigin}/`);
+      target.search = window.location.search;
+      target.hash = window.location.hash;
+      window.location.replace(target.toString());
+    })();
+  </script>
   <link id="appDocumentFavicon" rel="icon" type="image/svg+xml" href="app/favicon.svg" />
   <link rel="stylesheet" href="app/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" />

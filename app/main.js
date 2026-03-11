@@ -3168,6 +3168,116 @@ function currentClickEditDeclarations() {
   return declarations;
 }
 
+function quickSyncValueFromDeclaration(prop, value, fallback = "") {
+  if (!value) return "";
+  const normalizedProp = String(prop || "").trim().toLowerCase();
+  if (normalizedProp === "color" || normalizedProp === "background-color") {
+    return normalizeHex(value, fallback || QUICK_DEFAULTS.menuTextColor);
+  }
+  if (normalizedProp === "font-size") {
+    const px = String(value).match(/([0-9.]+)\s*px/i);
+    return px ? String(Math.round(Number.parseFloat(px[1]) || 0)) : "";
+  }
+  if (normalizedProp === "font-weight") {
+    const weight = String(value || "").trim();
+    return /^\d{3}$/.test(weight) ? weight : "";
+  }
+  return "";
+}
+
+function quickUpdatesFromClickEdit(baseSelector, declarations, { withInteractiveStates = false } = {}) {
+  if (withInteractiveStates || !declarations || typeof declarations !== "object") return null;
+  const selector = normalizeSelectorForMatch(baseSelector);
+  const selectorParts = splitSelectorList(baseSelector);
+  if (!selector) return null;
+  const updates = {};
+  const setColor = (quickKey, cssProp) => {
+    const next = quickSyncValueFromDeclaration(cssProp, declarations[cssProp], state.quick[quickKey]);
+    if (next) updates[quickKey] = next;
+  };
+  const setWeight = (quickKey, cssProp) => {
+    const next = quickSyncValueFromDeclaration(cssProp, declarations[cssProp], "");
+    if (next) updates[quickKey] = next;
+  };
+  const selectorListIncludes = (...targets) => {
+    const normalizedTargets = targets.map((target) => normalizeSelectorForMatch(target));
+    return selectorParts.some((part) => normalizedTargets.includes(part));
+  };
+  const selectorListEveryEndsWith = (...suffixes) => {
+    const normalizedSuffixes = suffixes.map((suffix) => normalizeSelectorForMatch(suffix));
+    return normalizedSuffixes.every((suffix) => selectorParts.some((part) => part.endsWith(suffix)));
+  };
+
+  if (
+    selector === normalizeSelectorForMatch(".exe-content .box-content, .exe-content .iDevice_content, .exe-content .iDevice_inner")
+    || selectorListEveryEndsWith(".box-content", ".idevice_content", ".idevice_inner")
+  ) {
+    setColor("boxBgColor", "background-color");
+    return Object.keys(updates).length ? updates : null;
+  }
+  if (
+    selector === normalizeSelectorForMatch(".exe-content .box-title, .exe-content .iDeviceTitle")
+    || selectorListIncludes(".exe-content .box-title", ".exe-content .idevicetitle")
+    || selectorListEveryEndsWith(".box-title", ".idevicetitle")
+  ) {
+    setColor("boxTitleColor", "color");
+    if (declarations["font-size"]) {
+      const px = String(declarations["font-size"]).match(/([0-9.]+)\s*px/i);
+      if (px) updates.boxTitleSize = Math.max(1, Math.min(2.4, Number((Number.parseFloat(px[1]) / 16).toFixed(2))));
+    }
+    return Object.keys(updates).length ? updates : null;
+  }
+  if (selector === normalizeSelectorForMatch(".exe-content .page-title") || selectorListIncludes(".exe-content .page-title")) {
+    setColor("titleColor", "color");
+    if (declarations["font-size"]) {
+      const px = String(declarations["font-size"]).match(/([0-9.]+)\s*px/i);
+      if (px) updates.pageTitleSize = Math.max(1.1, Math.min(3.2, Number((Number.parseFloat(px[1]) / 16).toFixed(2))));
+    }
+    setWeight("pageTitleWeight", "font-weight");
+    return Object.keys(updates).length ? updates : null;
+  }
+  if (selector === normalizeSelectorForMatch(".exe-content .package-title") || selectorListIncludes(".exe-content .package-title")) {
+    setColor("packageTitleColor", "color");
+    if (declarations["font-size"]) {
+      const px = String(declarations["font-size"]).match(/([0-9.]+)\s*px/i);
+      if (px) updates.packageTitleSize = Math.max(0, Math.min(4, Number((Number.parseFloat(px[1]) / 16).toFixed(2))));
+    }
+    setWeight("packageTitleWeight", "font-weight");
+    return Object.keys(updates).length ? updates : null;
+  }
+  if (selector === normalizeSelectorForMatch("#siteNav") || selectorListIncludes("#sitenav")) {
+    setColor("menuBgColor", "background-color");
+    return Object.keys(updates).length ? updates : null;
+  }
+  if (selector === normalizeSelectorForMatch("#siteNav a") || selectorListIncludes("#sitenav a")) {
+    setColor("menuTextColor", "color");
+    return Object.keys(updates).length ? updates : null;
+  }
+  if (selector === normalizeSelectorForMatch("#siteNav a.active") || selectorListIncludes("#sitenav a.active")) {
+    setColor("menuActiveBgColor", "background-color");
+    setColor("menuActiveTextColor", "color");
+    return Object.keys(updates).length ? updates : null;
+  }
+  if (
+    selector === normalizeSelectorForMatch(".exe-content button:not(.toggler):not(.box-toggle)")
+    || selectorListIncludes(".exe-content button:not(.toggler):not(.box-toggle)")
+    || selectorParts.some((part) => part.endsWith("button:not(.toggler):not(.box-toggle)"))
+  ) {
+    setColor("buttonBgColor", "background-color");
+    setColor("buttonTextColor", "color");
+    return Object.keys(updates).length ? updates : null;
+  }
+  return null;
+}
+
+function syncQuickControlsFromClickEdit(baseSelector, declarations, options = {}) {
+  const updates = quickUpdatesFromClickEdit(baseSelector, declarations, options);
+  if (!updates) return false;
+  state.quick = { ...state.quick, ...updates };
+  quickToUI(state.quick);
+  return true;
+}
+
 function renderLiveClickEditPreview() {
   if (!state.elpxMode || !els.clickEditModal || els.clickEditModal.hidden) return;
   const selector = expandedClickEditSelector();
@@ -3596,6 +3706,7 @@ function applyClickEditChanges() {
   }
   writeCss(nextCss);
   markDirty();
+  syncQuickControlsFromClickEdit(baseSelector, declarations, { withInteractiveStates });
   closeClickEditModal();
   setStatus(i18nText(
     "status.clickChangesApplied",
@@ -3770,18 +3881,14 @@ function quickFromCss(cssText) {
     lastRulePropValue(bodyModeSelectors, ["background-color", "background"]) || q.pageBgColor,
     q.pageBgColor
   );
-  q.fontBody = matchValue(
-    /\.exe-content\s*\{[\s\S]*?font-family:\s*([^;]+);/i,
-    contentFontFamilyRaw || lastRulePropValue(bodyModeSelectors, ["font-family"]) || q.fontBody
-  );
-  q.fontTitles = matchValue(
-    /\.exe-content\s*\.page-title\s*\{[\s\S]*?font-family:\s*([^;]+);/i,
-    matchValue(
-      /\.exe-content\s*\.box-head\s*\.box-title\s*\{[\s\S]*?font-family:\s*([^;]+);/i,
-      q.fontBody
-    )
-  );
-  q.fontMenu = matchValue(/#siteNav a\s*\{[\s\S]*?font-family:\s*([^;]+);/i, q.fontBody);
+  q.fontBody = contentFontFamilyRaw
+    || lastRulePropValue(bodyModeSelectors, ["font-family"])
+    || q.fontBody;
+  q.fontTitles = lastRulePropValue(
+    [".exe-content .page-title", ".exe-content .box-title", ".exe-content .iDeviceTitle", ".exe-content .box-head .box-title"],
+    ["font-family"]
+  ) || q.fontBody;
+  q.fontMenu = lastRulePropValue(["#siteNav a", "#siteNav ul li a"], ["font-family"]) || q.fontBody;
   const effectiveFontSizeRaw = String(contentFontSizeRaw || bodyFontSizeRaw || "").trim();
   const sizeMatch = effectiveFontSizeRaw.match(/([0-9.]+)\s*px/i);
   if (sizeMatch) q.baseFontSize = Number(sizeMatch[1]);
@@ -3791,17 +3898,17 @@ function quickFromCss(cssText) {
   }
   const lineHeightMatch = String(contentLineHeightRaw || bodyLineHeightRaw || "").match(/([0-9.]+)/);
   if (lineHeightMatch) q.lineHeight = Number(lineHeightMatch[1]);
-  const pageTitleSizeRaw = matchValue(/\.exe-content\s*\.page-title\s*\{[\s\S]*?font-size:\s*([^;]+);/i, "");
+  const pageTitleSizeRaw = lastRulePropValue([".exe-content .page-title"], ["font-size"]);
   const pageTitleSizeMatch = pageTitleSizeRaw.match(/([0-9.]+)\s*rem/i);
   if (pageTitleSizeMatch) q.pageTitleSize = Number(pageTitleSizeMatch[1]);
-  const pageTitleWeightRaw = matchValue(/\.exe-content\s*\.page-title\s*\{[\s\S]*?font-weight:\s*([^;]+);/i, "");
+  const pageTitleWeightRaw = lastRulePropValue([".exe-content .page-title"], ["font-weight"]);
   if (/^\d{3}$/.test(pageTitleWeightRaw)) q.pageTitleWeight = pageTitleWeightRaw;
-  const pageTitleUpperRaw = matchValue(/\.exe-content\s*\.page-title\s*\{[\s\S]*?text-transform:\s*([^;]+);/i, "");
+  const pageTitleUpperRaw = lastRulePropValue([".exe-content .page-title"], ["text-transform"]);
   if (pageTitleUpperRaw) q.pageTitleUppercase = pageTitleUpperRaw.toLowerCase().includes("upper");
-  const pageTitleLsRaw = matchValue(/\.exe-content\s*\.page-title\s*\{[\s\S]*?letter-spacing:\s*([^;]+);/i, "");
+  const pageTitleLsRaw = lastRulePropValue([".exe-content .page-title"], ["letter-spacing"]);
   const pageTitleLsMatch = pageTitleLsRaw.match(/([0-9.]+)\s*px/i);
   if (pageTitleLsMatch) q.pageTitleLetterSpacing = Number(pageTitleLsMatch[1]);
-  const pageTitleMbRaw = matchValue(/\.exe-content\s*\.page-title\s*\{[\s\S]*?margin-bottom:\s*([^;]+);/i, "");
+  const pageTitleMbRaw = lastRulePropValue([".exe-content .page-title"], ["margin-bottom"]);
   const pageTitleMbMatch = pageTitleMbRaw.match(/([0-9.]+)\s*rem/i);
   if (pageTitleMbMatch) q.pageTitleMarginBottom = Number(pageTitleMbMatch[1]);
   const packageTitleSelectors = [".exe-content .package-title", ".package-title", "#headerContent"];
@@ -3824,12 +3931,20 @@ function quickFromCss(cssText) {
     || matchValue(/\.exe-content\s*\.box-head\s*\{[\s\S]*?gap:\s*([^;]+);/i, "");
   q.boxTitleGap = parseCssPx(boxHeadGapRaw, 0);
 
-  q.linkColor = normalizeHex(lastCssPropValue("\\.exe-content a", "color") || q.linkColor, q.linkColor);
-  q.titleColor = normalizeHex(lastCssPropValue("\\.exe-content \\.page-title", "color") || q.titleColor, q.titleColor);
-  q.textColor = normalizeHex(lastCssPropValue("\\.exe-content", "color") || q.textColor, q.textColor);
+  q.linkColor = normalizeHex(
+    lastRulePropValue([".exe-content a"], ["color"]) || q.linkColor,
+    q.linkColor
+  );
+  q.titleColor = normalizeHex(
+    lastRulePropValue([".exe-content .page-title"], ["color"]) || q.titleColor,
+    q.titleColor
+  );
+  q.textColor = normalizeHex(
+    lastRulePropValue([".exe-content", "#node-content-container.exe-content"], ["color"]) || q.textColor,
+    q.textColor
+  );
   q.contentBgColor = normalizeHex(
-    lastCssPropValue("\\.exe-content", "background-color")
-      || lastCssPropValue("\\.exe-content", "background")
+    lastRulePropValue([".exe-content", "#node-content-container.exe-content"], ["background-color", "background"])
       || q.contentBgColor,
     q.contentBgColor
   );
@@ -3902,11 +4017,13 @@ function quickFromCss(cssText) {
     else q.boxFontSize = "24px";
   }
   q.buttonBgColor = normalizeHex(
-    matchValue(/\.exe-content button(?:\s*:not\(\.toggler\)(?:\s*:not\(\.box-toggle\))?)?\s*\{[\s\S]*?background:\s*([^;]+);/i, q.buttonBgColor),
+    lastRulePropValue([".exe-content button:not(.toggler):not(.box-toggle)"], ["background-color", "background"])
+      || q.buttonBgColor,
     q.buttonBgColor
   );
   q.buttonTextColor = normalizeHex(
-    matchValue(/\.exe-content button(?:\s*:not\(\.toggler\)(?:\s*:not\(\.box-toggle\))?)?\s*\{[\s\S]*?color:\s*([^;]+);/i, q.buttonTextColor),
+    lastRulePropValue([".exe-content button:not(.toggler):not(.box-toggle)"], ["color"])
+      || q.buttonTextColor,
     q.buttonTextColor
   );
 
@@ -4531,9 +4648,7 @@ function auditStyleCss(css) {
 function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
   const key = String(changedKey || "").trim();
   if (key) {
-    const baseValues = key === "compactNoHeaderIdevices"
-      ? state.quick
-      : quickFromCss(readCss());
+    const baseValues = state.quick;
     state.quick = quickFromUI({
       base: baseValues,
       onlyKey: key

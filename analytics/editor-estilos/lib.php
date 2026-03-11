@@ -280,6 +280,13 @@ function analytics_get_period_config($range) {
         'to' => $midnight + 86399,
         'granularity' => 'hour'
       );
+    case 'last24':
+      return array(
+        'label' => 'Ultimas 24 horas',
+        'from' => time() - 86399,
+        'to' => time(),
+        'granularity' => 'hour'
+      );
     case 'week':
       $weekday = intval(date('N'));
       $start = $midnight - (($weekday - 1) * 86400);

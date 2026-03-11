@@ -311,6 +311,8 @@ window.$i18n.en = {
   "quick.menu.summary": "Navigation (side menu)",
   "quick.menu.bg": "Menu background",
   "quick.menu.text": "Menu text",
+  "quick.menu.hoverBg": "Hover background",
+  "quick.menu.hoverText": "Hover text",
   "quick.menu.activeBg": "Active background",
   "quick.menu.activeText": "Active text",
   "quick.menu.navIcons": "Navigation icons",

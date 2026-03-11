@@ -372,6 +372,8 @@ const QUICK_DEFAULTS = {
   compactNoHeaderIdevices: false,
   menuBgColor: "#f6f6f6",
   menuTextColor: "#000000",
+  menuHoverBgColor: "#f2f2f2",
+  menuHoverTextColor: "#000000",
   menuActiveBgColor: "#ffffff",
   menuActiveTextColor: "#d76b4a",
   boxBgColor: "#ffffff",
@@ -3832,25 +3834,34 @@ function quickFromCss(cssText) {
     q.contentBgColor
   );
   q.menuBgColor = normalizeHex(
-    lastCssPropValue("#siteNav", "background-color")
-      || lastCssPropValue("#siteNav", "background")
+    lastRulePropValue(["#siteNav"], ["background-color", "background"])
       || q.menuBgColor,
     q.menuBgColor
   );
   q.menuTextColor = normalizeHex(
-    lastCssPropValue("#siteNav a", "color")
-      || lastCssPropValue("#siteNav ul li a", "color")
-      || lastCssPropValue("#siteNav", "color")
+    lastRulePropValue(["#siteNav a", "#siteNav ul li a", "#siteNav"], ["color"])
       || q.menuTextColor,
     q.menuTextColor
   );
+  q.menuHoverBgColor = normalizeHex(
+    lastRulePropValue(["#siteNav a:hover", "#siteNav a:focus"], ["background-color", "background"])
+      || q.menuHoverBgColor,
+    q.menuHoverBgColor
+  );
+  q.menuHoverTextColor = normalizeHex(
+    lastRulePropValue(["#siteNav a:hover", "#siteNav a:focus"], ["color"])
+      || q.menuHoverTextColor,
+    q.menuHoverTextColor
+  );
   q.menuActiveBgColor = normalizeHex(
-    lastCssPropValue("#siteNav a\\.active", "background-color")
-      || lastCssPropValue("#siteNav a\\.active", "background")
+    lastRulePropValue(["#siteNav a.active"], ["background-color", "background"])
       || q.menuActiveBgColor,
     q.menuActiveBgColor
   );
-  q.menuActiveTextColor = normalizeHex(lastCssPropValue("#siteNav a\\.active", "color") || q.menuActiveTextColor, q.menuActiveTextColor);
+  q.menuActiveTextColor = normalizeHex(
+    lastRulePropValue(["#siteNav a.active"], ["color"]) || q.menuActiveTextColor,
+    q.menuActiveTextColor
+  );
   q.boxBgColor = normalizeHex(
     lastRulePropValue([".exe-content .box-content", ".exe-content .iDevice_content", ".exe-content .iDevice_inner"], ["background-color"])
       || lastRulePropValue([".exe-content .box-content", ".exe-content .iDevice_content", ".exe-content .iDevice_inner"], ["background"])
@@ -4082,8 +4093,9 @@ function quickFromCss(cssText) {
   return q;
 }
 
-function buildQuickCss({ important = true } = {}) {
+function buildQuickCss({ important = true, base = null } = {}) {
   const q = state.quick;
+  const baseQuick = { ...QUICK_DEFAULTS, ...(base || {}) };
   const bang = important ? " !important" : "";
   const boxBgBang = " !important";
   const bodyModeSelectors = modeBodySelectors();
@@ -4242,6 +4254,82 @@ ${joinSelectorList([
 }
 `
     : "";
+  const baseHasLateralSpace = baseQuick.contentWidthMode === "px"
+    || baseQuick.contentWidthMode === "mixed"
+    || (baseQuick.contentWidthMode === "percent" && Number(baseQuick.contentWidthPercent) < 100);
+  const baseEffectivePageBgColor = baseHasLateralSpace
+    ? normalizeHex(baseQuick.contentOuterBgColor, QUICK_DEFAULTS.contentOuterBgColor)
+    : normalizeHex(baseQuick.pageBgColor);
+  const buildRule = (selector, declarations) => {
+    const lines = declarations.filter(Boolean);
+    if (!lines.length) return "";
+    return `${selector} {\n${lines.join("\n")}\n}\n`;
+  };
+  const bodyRule = buildRule(bodyModeSelectors, [
+    effectivePageBgColor !== baseEffectivePageBgColor ? `  background-color: ${effectivePageBgColor}${bang};` : "",
+    String(q.fontBody) !== String(baseQuick.fontBody) ? `  font-family: ${q.fontBody}${bang};` : "",
+    Number(q.baseFontSize) !== Number(baseQuick.baseFontSize) ? `  font-size: ${q.baseFontSize}px${bang};` : "",
+    Number(q.lineHeight) !== Number(baseQuick.lineHeight) ? `  line-height: ${q.lineHeight}${bang};` : ""
+  ]);
+  const contentRule = buildRule(".exe-content", [
+    String(q.fontBody) !== String(baseQuick.fontBody) ? `  font-family: ${q.fontBody}${bang};` : "",
+    normalizeHex(q.textColor) !== normalizeHex(baseQuick.textColor) ? `  color: ${normalizeHex(q.textColor)}${bang};` : "",
+    normalizeHex(q.contentBgColor) !== normalizeHex(baseQuick.contentBgColor) ? `  background-color: ${normalizeHex(q.contentBgColor)}${bang};` : ""
+  ]);
+  const titleFontRule = buildRule(".exe-content .page-title,\n.exe-content .box-title,\n.exe-content .iDeviceTitle", [
+    String(q.fontTitles) !== String(baseQuick.fontTitles) ? `  font-family: ${q.fontTitles}${bang};` : ""
+  ]);
+  const packageTitleRule = buildRule(".exe-content .package-title", [
+    normalizeHex(q.packageTitleColor) !== normalizeHex(baseQuick.packageTitleColor) ? `  color: ${normalizeHex(q.packageTitleColor)}${bang};` : "",
+    Number(q.packageTitleSize) !== Number(baseQuick.packageTitleSize) ? `  font-size: ${q.packageTitleSize}rem${bang};` : "",
+    String(q.packageTitleWeight) !== String(baseQuick.packageTitleWeight) ? `  font-weight: ${q.packageTitleWeight}${bang};` : ""
+  ]);
+  const linkRule = buildRule(".exe-content a", [
+    normalizeHex(q.linkColor) !== normalizeHex(baseQuick.linkColor) ? `  color: ${normalizeHex(q.linkColor)}${bang};` : ""
+  ]);
+  const pageTitleRule = buildRule(".exe-content .page-title", [
+    normalizeHex(q.titleColor) !== normalizeHex(baseQuick.titleColor) ? `  color: ${normalizeHex(q.titleColor)}${bang};` : "",
+    Number(q.pageTitleSize) !== Number(baseQuick.pageTitleSize) ? `  font-size: ${q.pageTitleSize}rem${bang};` : "",
+    String(q.pageTitleWeight) !== String(baseQuick.pageTitleWeight) ? `  font-weight: ${q.pageTitleWeight}${bang};` : "",
+    Boolean(q.pageTitleUppercase) !== Boolean(baseQuick.pageTitleUppercase) ? `  text-transform: ${q.pageTitleUppercase ? "uppercase" : "none"}${bang};` : "",
+    Number(q.pageTitleLetterSpacing) !== Number(baseQuick.pageTitleLetterSpacing) ? `  letter-spacing: ${q.pageTitleLetterSpacing}px${bang};` : "",
+    Number(q.pageTitleMarginBottom) !== Number(baseQuick.pageTitleMarginBottom) ? `  margin-bottom: ${q.pageTitleMarginBottom}rem${bang};` : ""
+  ]);
+  const siteNavRule = buildRule("#siteNav", [
+    normalizeHex(q.menuBgColor) !== normalizeHex(baseQuick.menuBgColor) ? `  background-color: ${normalizeHex(q.menuBgColor)}${bang};` : ""
+  ]);
+  const siteNavLinkRule = buildRule("#siteNav a", [
+    String(q.fontMenu) !== String(baseQuick.fontMenu) ? `  font-family: ${q.fontMenu}${bang};` : "",
+    normalizeHex(q.menuTextColor) !== normalizeHex(baseQuick.menuTextColor) ? `  color: ${normalizeHex(q.menuTextColor)}${bang};` : ""
+  ]);
+  const siteNavHoverRule = buildRule("#siteNav a:hover,\n#siteNav a:focus", [
+    normalizeHex(q.menuHoverBgColor) !== normalizeHex(baseQuick.menuHoverBgColor) ? `  background-color: ${normalizeHex(q.menuHoverBgColor)}${bang};` : "",
+    normalizeHex(q.menuHoverTextColor) !== normalizeHex(baseQuick.menuHoverTextColor) ? `  color: ${normalizeHex(q.menuHoverTextColor)}${bang};` : ""
+  ]);
+  const siteNavActiveRule = buildRule("#siteNav a.active", [
+    normalizeHex(q.menuActiveBgColor) !== normalizeHex(baseQuick.menuActiveBgColor) ? `  background-color: ${normalizeHex(q.menuActiveBgColor)}${bang};` : "",
+    normalizeHex(q.menuActiveTextColor) !== normalizeHex(baseQuick.menuActiveTextColor) ? `  color: ${normalizeHex(q.menuActiveTextColor)}${bang};` : ""
+  ]);
+  const boxBorderRule = buildRule(".exe-content .box,\n#node-content-container.exe-content .box", [
+    normalizeHex(q.boxBorderColor) !== normalizeHex(baseQuick.boxBorderColor) ? `  border-color: ${normalizeHex(q.boxBorderColor)}${bang};` : ""
+  ]);
+  const boxTitleRule = buildRule(".exe-content .box-title,\n.exe-content .iDeviceTitle", [
+    normalizeHex(q.boxTitleColor) !== normalizeHex(baseQuick.boxTitleColor) ? `  color: ${normalizeHex(q.boxTitleColor)}${bang};` : "",
+    Number(q.boxTitleSize) !== Number(baseQuick.boxTitleSize) ? `  font-size: ${q.boxTitleSize}rem${bang};` : ""
+  ]);
+  const boxHeadRule = buildRule(".exe-content .box-head", [
+    Number(q.boxTitleGap) !== Number(baseQuick.boxTitleGap) ? `  gap: ${q.boxTitleGap}px${bang};` : ""
+  ]);
+  const boxContentRule = buildRule(".exe-content .box-content,\n.exe-content .iDevice_content,\n.exe-content .iDevice_inner", [
+    normalizeHex(q.boxBgColor) !== normalizeHex(baseQuick.boxBgColor) ? `  background-color: ${normalizeHex(q.boxBgColor)}${boxBgBang};` : "",
+    String(q.boxTextAlign) !== String(baseQuick.boxTextAlign) ? `  text-align: ${q.boxTextAlign}${bang};` : "",
+    String(q.boxFontSize) !== String(baseQuick.boxFontSize) && q.boxFontSize !== "inherit" ? `  font-size: ${q.boxFontSize}${bang};` : ""
+  ]);
+  const buttonRule = buildRule(".exe-content button:not(.toggler):not(.box-toggle)", [
+    normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) ? `  background-color: ${normalizeHex(q.buttonBgColor)}${bang};` : "",
+    normalizeHex(q.buttonTextColor) !== normalizeHex(baseQuick.buttonTextColor) ? `  color: ${normalizeHex(q.buttonTextColor)}${bang};` : "",
+    normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) ? `  border-color: ${normalizeHex(q.buttonBgColor)}${bang};` : ""
+  ]);
   return `
 ${logoMeta}
 ${widthMeta}
@@ -4250,12 +4338,7 @@ ${headerMeta}
 ${footerMeta}
 ${noHeaderMeta}
 ${navIconsMeta}
-${bodyModeSelectors} {
-  background-color: ${effectivePageBgColor}${bang};
-  font-family: ${q.fontBody}${bang};
-  font-size: ${q.baseFontSize}px${bang};
-  line-height: ${q.lineHeight}${bang};
-}
+${bodyRule}
 ${q.bgImageEnabled && bgImagePath ? `
 ${contentAreaSelectors} {
   background-image: ${Math.max(0, Math.min(90, Number(q.bgImageSoftness) || QUICK_DEFAULTS.bgImageSoftness)) > 0
@@ -4278,67 +4361,20 @@ ${layoutWidthSelectors} {
   margin-right: ${q.contentCentered ? "auto" : "0"}${bang};
 }
 `}
-.exe-content {
-  font-family: ${q.fontBody}${bang};
-  color: ${normalizeHex(q.textColor)}${bang};
-  background-color: ${normalizeHex(q.contentBgColor)}${bang};
-}
-.exe-content .page-title,
-.exe-content .box-title,
-.exe-content .iDeviceTitle {
-  font-family: ${q.fontTitles}${bang};
-}
-.exe-content .package-title {
-  color: ${normalizeHex(q.packageTitleColor)}${bang};
-  font-size: ${q.packageTitleSize}rem${bang};
-  font-weight: ${q.packageTitleWeight}${bang};
-}
-.exe-content a {
-  color: ${normalizeHex(q.linkColor)}${bang};
-}
-.exe-content .page-title {
-  color: ${normalizeHex(q.titleColor)}${bang};
-  font-size: ${q.pageTitleSize}rem${bang};
-  font-weight: ${q.pageTitleWeight}${bang};
-  text-transform: ${q.pageTitleUppercase ? "uppercase" : "none"}${bang};
-  letter-spacing: ${q.pageTitleLetterSpacing}px${bang};
-  margin-bottom: ${q.pageTitleMarginBottom}rem${bang};
-}
-#siteNav {
-  background-color: ${normalizeHex(q.menuBgColor)}${bang};
-}
-#siteNav a {
-  font-family: ${q.fontMenu}${bang};
-  color: ${normalizeHex(q.menuTextColor)}${bang};
-}
-#siteNav a.active {
-  background-color: ${normalizeHex(q.menuActiveBgColor)}${bang};
-  color: ${normalizeHex(q.menuActiveTextColor)}${bang};
-}
-.exe-content .box,
-#node-content-container.exe-content .box {
-  border-color: ${normalizeHex(q.boxBorderColor)}${bang};
-}
-.exe-content .box-title,
-.exe-content .iDeviceTitle {
-  color: ${normalizeHex(q.boxTitleColor)}${bang};
-  font-size: ${q.boxTitleSize}rem${bang};
-}
-.exe-content .box-head {
-  gap: ${q.boxTitleGap}px${bang};
-}
-.exe-content .box-content,
-.exe-content .iDevice_content,
-.exe-content .iDevice_inner {
-  background-color: ${normalizeHex(q.boxBgColor)}${boxBgBang};
-  text-align: ${q.boxTextAlign}${bang};
-  ${q.boxFontSize !== "inherit" ? `font-size: ${q.boxFontSize}${bang};` : ""}
-}
-.exe-content button:not(.toggler):not(.box-toggle) {
-  background-color: ${normalizeHex(q.buttonBgColor)}${bang};
-  color: ${normalizeHex(q.buttonTextColor)}${bang};
-  border-color: ${normalizeHex(q.buttonBgColor)}${bang};
-}
+${contentRule}
+${titleFontRule}
+${packageTitleRule}
+${linkRule}
+${pageTitleRule}
+${siteNavRule}
+${siteNavLinkRule}
+${siteNavHoverRule}
+${siteNavActiveRule}
+${boxBorderRule}
+${boxTitleRule}
+${boxHeadRule}
+${boxContentRule}
+${buttonRule}
 ${headerImageRule}
 ${headerHideTitleRule}
 ${footerImageRule}
@@ -4497,7 +4533,7 @@ function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
   if (key) {
     const baseValues = key === "compactNoHeaderIdevices"
       ? state.quick
-      : quickFromPreviewSnapshot(quickFromCss(readCss()));
+      : quickFromCss(readCss());
     state.quick = quickFromUI({
       base: baseValues,
       onlyKey: key
@@ -4524,7 +4560,7 @@ function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
     return;
   }
   const baseCss = stripQuickBlock(readCss());
-  const quickCss = buildQuickCss({ important: false });
+  const quickCss = buildQuickCss({ important: false, base: quickFromCss(baseCss) });
   const cleanedBaseCss = pruneClickOverridesConflicts(baseCss, quickCss);
   const css = `${cleanedBaseCss}\n\n/* quick-overrides:start */\n${quickCss}\n/* quick-overrides:end */\n`;
   writeCss(css);
@@ -4550,7 +4586,7 @@ function migrateQuickBlockSchemaIfNeeded() {
   const currentCss = readCss();
   if (!quickBlockNeedsSchemaMigration(currentCss)) return false;
   const baseCss = stripQuickBlock(currentCss);
-  const rebuiltCss = `${baseCss}\n\n/* quick-overrides:start */\n${buildQuickCss({ important: false })}\n/* quick-overrides:end */\n`;
+  const rebuiltCss = `${baseCss}\n\n/* quick-overrides:start */\n${buildQuickCss({ important: false, base: quickFromCss(baseCss) })}\n/* quick-overrides:end */\n`;
   if (rebuiltCss === currentCss) return false;
   writeCss(rebuiltCss);
   return true;
@@ -4559,7 +4595,6 @@ function migrateQuickBlockSchemaIfNeeded() {
 function refreshQuickControls() {
   const css = readCss();
   state.quick = { ...state.quick, ...quickFromCss(css) };
-  state.quick = quickFromPreviewSnapshot(state.quick);
   if (state.quick.bgImagePath && !state.files.has(state.quick.bgImagePath)) {
     state.quick.bgImagePath = "";
     state.quick.bgImageEnabled = false;

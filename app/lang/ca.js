@@ -311,6 +311,8 @@ window.$i18n.ca = {
   "quick.menu.summary": "Navegació (menú lateral)",
   "quick.menu.bg": "Fons del menú",
   "quick.menu.text": "Text del menú",
+  "quick.menu.hoverBg": "Fons en passar",
+  "quick.menu.hoverText": "Text en passar",
   "quick.menu.activeBg": "Fons actiu",
   "quick.menu.activeText": "Text actiu",
   "quick.menu.navIcons": "Icones de navegació",

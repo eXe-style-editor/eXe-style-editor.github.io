@@ -519,6 +519,8 @@ const APP_BASE_PATH = (() => {
 })();
 const ELPX_URL_PREFIX = `${APP_BASE_PATH}__elpx/`;
 const ELPX_CACHE_PREFIX = "editor-estilos:elpx:";
+const ANALYTICS_FALLBACK_ENDPOINT = "https://bilateria.org/app/estadistica/editor-estilos/track.php";
+const ANALYTICS_FALLBACK_STATS_URL = "https://bilateria.org/app/estadistica/editor-estilos/admin-stats.php";
 
 function i18nText(key, fallback, params = {}) {
   const i18n = window.EditorI18n;
@@ -536,6 +538,83 @@ function confirmT(key, fallback, params = {}) {
 
 function setStatusT(key, fallback, params = {}) {
   setStatus(i18nText(key, fallback, params));
+}
+
+function getMetaContent(name) {
+  const el = document.querySelector(`meta[name="${name}"]`);
+  const value = el?.getAttribute("content") || "";
+  return String(value).trim();
+}
+
+function getAnalyticsConfig() {
+  return {
+    endpoint: getMetaContent("analytics-endpoint") || ANALYTICS_FALLBACK_ENDPOINT,
+    statsUrl: getMetaContent("analytics-stats-url") || ANALYTICS_FALLBACK_STATS_URL,
+    siteId: getMetaContent("analytics-site-id") || "editor-estilos"
+  };
+}
+
+function shouldTrackAnalytics() {
+  if (window.location.protocol !== "http:" && window.location.protocol !== "https:") return false;
+  const host = String(window.location.hostname || "").toLowerCase();
+  return host !== "localhost" && host !== "127.0.0.1" && host !== "::1" && !host.endsWith(".local");
+}
+
+function updateAnalyticsSummary(data) {
+  const summary = document.getElementById("analyticsSummary");
+  const totalEl = document.getElementById("analyticsTotalValue");
+  const todayEl = document.getElementById("analyticsTodayValue");
+  const linkEl = document.getElementById("analyticsStatsLink");
+  if (!(summary instanceof HTMLElement) || !(totalEl instanceof HTMLElement) || !(todayEl instanceof HTMLElement)) return;
+  const total = Number.parseInt(String(data?.total ?? ""), 10);
+  const today = Number.parseInt(String(data?.today ?? ""), 10);
+  if (!Number.isFinite(total) || !Number.isFinite(today)) return;
+  totalEl.textContent = String(total);
+  todayEl.textContent = String(today);
+  const cfg = getAnalyticsConfig();
+  if (linkEl instanceof HTMLAnchorElement && cfg.statsUrl) {
+    linkEl.href = cfg.statsUrl;
+  }
+  summary.hidden = false;
+}
+
+function loadAnalyticsSummary() {
+  if (!shouldTrackAnalytics()) return;
+  const cfg = getAnalyticsConfig();
+  if (!cfg.endpoint) return;
+
+  const callbackName = `__editorAnalyticsCallback_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+  const script = document.createElement("script");
+  const params = new URLSearchParams();
+  const pageUrl = window.location.href;
+  const referrer = document.referrer || "";
+  const pageParams = new URLSearchParams(window.location.search || "");
+
+  params.set("site", cfg.siteId);
+  params.set("callback", callbackName);
+  params.set("page_url", pageUrl);
+  params.set("referrer", referrer);
+  ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"].forEach((key) => {
+    const value = String(pageParams.get(key) || "").trim();
+    if (value) params.set(key, value);
+  });
+
+  window[callbackName] = (payload) => {
+    try {
+      updateAnalyticsSummary(payload || {});
+    } finally {
+      delete window[callbackName];
+      script.remove();
+    }
+  };
+
+  script.async = true;
+  script.src = `${cfg.endpoint}${cfg.endpoint.includes("?") ? "&" : "?"}${params.toString()}`;
+  script.onerror = () => {
+    delete window[callbackName];
+    script.remove();
+  };
+  document.head.appendChild(script);
 }
 
 const FILE_TYPE_OPTIONS = [
@@ -6916,6 +6995,7 @@ async function loadDefaultBootElpx() {
   if (window.EditorI18n && typeof window.EditorI18n.init === "function") {
     window.EditorI18n.init();
   }
+  loadAnalyticsSummary();
   setupEvents();
   refreshI18nDependentUi();
   window.addEventListener("editor-i18n:changed", refreshI18nDependentUi);

@@ -84,6 +84,24 @@ python3 -m http.server 8000
 
 Luego abre `http://localhost:8000`.
 
+## Estadisticas de visitas
+
+El proyecto incluye una integracion minima con un contador propio alojado en IONOS:
+
+- resumen visible en el pie: visitas totales y visitas de hoy
+- panel privado separado por aplicacion
+- almacenamiento sin cookies ni IP
+- clasificacion basica por origen, referrer y campanas UTM
+
+Los ficheros del backend para esta aplicacion estan en:
+
+- `analytics/editor-estilos/track.php`
+- `analytics/editor-estilos/admin-stats.php`
+- `analytics/editor-estilos/lib.php`
+- `analytics/editor-estilos/config.sample.php`
+
+El frontend solo intenta registrar visitas cuando la app se sirve por `http` o `https`. En `localhost` no envia eventos.
+
 ## Autoría y licencia
 
 - (c) [Juan José de Haro](https://bilateria.org)

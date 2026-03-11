@@ -821,6 +821,31 @@ textarea:focus-visible {
   text-align: center;
 }
 
+.favicon-preview {
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+  padding: 14px;
+  background:
+    linear-gradient(45deg, #eef2f6 25%, transparent 25%, transparent 75%, #eef2f6 75%, #eef2f6),
+    linear-gradient(45deg, #eef2f6 25%, transparent 25%, transparent 75%, #eef2f6 75%, #eef2f6);
+  background-position: 0 0, 10px 10px;
+  background-size: 20px 20px;
+}
+
+.favicon-preview.active {
+  display: flex;
+}
+
+.favicon-preview img {
+  image-rendering: auto;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  margin: 0;
+}
+
 .font-quick-actions {
   display: flex;
   flex-wrap: wrap;

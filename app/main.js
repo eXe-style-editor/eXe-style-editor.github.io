@@ -1,6 +1,6 @@
 const CORE_REQUIRED = ["config.xml", "style.css", "style.js", "screenshot.png"];
 const TEXT_EXTENSIONS = [".css", ".js", ".xml", ".txt", ".html", ".json", ".md"];
-const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"];
+const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico"];
 const DEFAULT_STYLE_JS = `/* style.js autogenerado por el editor para cumplir requisitos mínimos de eXe */\n`;
 const LEGACY_COMPAT_MARKERS = ["legacy-v2-v3-compat-v2", "legacy-v2-v3-compat-v3"];
 const LEGACY_COMPAT_MARKER = "legacy-v2-v3-compat-v3";
@@ -609,6 +609,9 @@ const els = {
   addLogoBtn: document.getElementById("addLogoBtn"),
   removeLogoBtn: document.getElementById("removeLogoBtn"),
   addLogoInput: document.getElementById("addLogoInput"),
+  addFaviconBtn: document.getElementById("addFaviconBtn"),
+  removeFaviconBtn: document.getElementById("removeFaviconBtn"),
+  addFaviconInput: document.getElementById("addFaviconInput"),
   addBgImageBtn: document.getElementById("addBgImageBtn"),
   removeBgImageBtn: document.getElementById("removeBgImageBtn"),
   addBgImageInput: document.getElementById("addBgImageInput"),
@@ -638,6 +641,9 @@ const els = {
   addIdeviceIconsBtn: document.getElementById("addIdeviceIconsBtn"),
   addIdeviceIconsInput: document.getElementById("addIdeviceIconsInput"),
   logoInfo: document.getElementById("logoInfo"),
+  faviconInfo: document.getElementById("faviconInfo"),
+  faviconPreviewWrap: document.getElementById("faviconPreviewWrap"),
+  faviconPreviewImage: document.getElementById("faviconPreviewImage"),
   quickInputs: Array.from(document.querySelectorAll("[data-quick]")),
   previewInputs: Array.from(document.querySelectorAll("[data-preview]"))
 };
@@ -1589,6 +1595,12 @@ function findCustomLogoPath() {
   return Array.from(state.files.keys()).find((p) => /^img\/.*\.(png|jpe?g|gif|webp|svg)$/i.test(p)) || "";
 }
 
+function findFaviconPath() {
+  if (state.files.has("img/favicon.ico")) return "img/favicon.ico";
+  if (state.files.has("img/favicon.png")) return "img/favicon.png";
+  return "";
+}
+
 function updateLogoInfo() {
   if (!els.logoInfo) return;
   if (!state.quick.logoPath || !state.files.has(state.quick.logoPath)) {
@@ -1596,6 +1608,43 @@ function updateLogoInfo() {
     return;
   }
   els.logoInfo.textContent = i18nText("info.logoCurrent", "Logo actual: {path}", { path: state.quick.logoPath });
+}
+
+function updateFaviconInfo() {
+  const path = findFaviconPath();
+  const previewWrap = els.faviconPreviewWrap;
+  const previewImage = els.faviconPreviewImage;
+  const docFavicon = document.getElementById("appDocumentFavicon");
+
+  if (previewWrap) {
+    previewWrap.hidden = !path;
+    previewWrap.classList.toggle("active", Boolean(path));
+  }
+  if (previewImage) {
+    if (path) {
+      previewImage.src = getBlobUrl(path);
+      previewImage.alt = i18nText("preview.faviconAlt", "Vista previa del favicon {path}", { path });
+    } else {
+      previewImage.removeAttribute("src");
+      previewImage.alt = i18nText("preview.faviconAltEmpty", "Sin favicon personalizado");
+    }
+  }
+  if (docFavicon instanceof HTMLLinkElement) {
+    if (path) {
+      docFavicon.href = getBlobUrl(path);
+      docFavicon.type = path.toLowerCase().endsWith(".ico") ? "image/x-icon" : "image/png";
+    } else {
+      docFavicon.href = "app/favicon.svg";
+      docFavicon.type = "image/svg+xml";
+    }
+  }
+
+  if (!els.faviconInfo) return;
+  if (!path) {
+    els.faviconInfo.textContent = i18nText("status.noFaviconLoaded", "Sin favicon personalizado.");
+    return;
+  }
+  els.faviconInfo.textContent = i18nText("info.faviconCurrent", "Favicon actual: {path}", { path });
 }
 
 function updateBgImageInfo() {
@@ -1788,6 +1837,7 @@ function getBlobUrl(path) {
   let mime = "application/octet-stream";
   if (lower.endsWith(".svg")) mime = "image/svg+xml";
   else if (lower.endsWith(".png")) mime = "image/png";
+  else if (lower.endsWith(".ico")) mime = "image/x-icon";
   else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) mime = "image/jpeg";
   else if (lower.endsWith(".gif")) mime = "image/gif";
   else if (lower.endsWith(".webp")) mime = "image/webp";
@@ -2729,6 +2779,7 @@ function quickToUI(values) {
   refreshHeaderFooterImageSelects();
   refreshNavIconSelects();
   updateLogoInfo();
+  updateFaviconInfo();
   updateBgImageInfo();
   updateHeaderImageInfo();
   updateFooterImageInfo();
@@ -5289,6 +5340,41 @@ async function onAddLogoSelected(file) {
   setStatus(i18nText("status.logoLoaded", `Logo cargado: ${path}`, { path }));
 }
 
+async function onAddFaviconSelected(file) {
+  if (!file) return;
+  const lowerName = String(file.name || "").toLowerCase();
+  const isIco = lowerName.endsWith(".ico");
+  const isPng = lowerName.endsWith(".png");
+  if (!isIco && !isPng) {
+    setStatusT("status.faviconInvalidImage", "El favicon debe ser un archivo .ico o .png.");
+    return;
+  }
+  const path = isIco ? "img/favicon.ico" : "img/favicon.png";
+  pushUndoSnapshot();
+  const bytes = new Uint8Array(await file.arrayBuffer());
+
+  for (const candidate of ["img/favicon.ico", "img/favicon.png"]) {
+    if (candidate !== path && state.files.has(candidate)) {
+      state.files.delete(candidate);
+      invalidateBlob(candidate);
+    }
+  }
+
+  state.files.set(path, bytes);
+  invalidateBlob(path);
+  markDirty();
+  refreshFileTypeFilterOptions();
+  renderFileList();
+  if (state.elpxMode) {
+    await syncThemeFilesToElpxCache();
+    reloadElpxPreviewPage();
+  } else {
+    renderPreview();
+  }
+  updateFaviconInfo();
+  setStatus(i18nText("status.faviconLoaded", `Favicon cargado: ${path}`, { path }));
+}
+
 async function removeLogo() {
   pushUndoSnapshot();
   if (state.quick.logoPath && state.files.has(state.quick.logoPath)) {
@@ -5309,6 +5395,28 @@ async function removeLogo() {
     renderPreview();
   }
   setStatusT("status.logoRemoved", "Logo eliminado.");
+}
+
+async function removeFavicon() {
+  pushUndoSnapshot();
+  let removed = false;
+  for (const path of ["img/favicon.ico", "img/favicon.png"]) {
+    if (!state.files.has(path)) continue;
+    state.files.delete(path);
+    invalidateBlob(path);
+    removed = true;
+  }
+  markDirty();
+  refreshFileTypeFilterOptions();
+  renderFileList();
+  if (state.elpxMode) {
+    await syncThemeFilesToElpxCache();
+    reloadElpxPreviewPage();
+  } else {
+    renderPreview();
+  }
+  updateFaviconInfo();
+  setStatusT(removed ? "status.faviconRemoved" : "status.noFaviconLoaded", removed ? "Favicon eliminado." : "Sin favicon personalizado.");
 }
 
 async function onAddBackgroundImageSelected(file) {
@@ -6049,6 +6157,28 @@ function setupEvents() {
     });
   });
 
+  els.addFaviconBtn?.addEventListener("click", () => {
+    if (!els.addFaviconInput) return;
+    els.addFaviconInput.value = "";
+    els.addFaviconInput.click();
+  });
+
+  els.addFaviconInput?.addEventListener("change", async (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    try {
+      await onAddFaviconSelected(file);
+    } catch (err) {
+      setStatus(i18nText("status.errorLoadingFavicon", `Error cargando favicon: ${err.message}`, { error: err.message }));
+    }
+  });
+
+  els.removeFaviconBtn?.addEventListener("click", () => {
+    removeFavicon().catch((err) => {
+      setStatus(i18nText("status.errorLoadingFavicon", `Error cargando favicon: ${err.message}`, { error: err.message }));
+    });
+  });
+
   els.addBgImageBtn?.addEventListener("click", () => {
     if (!els.addBgImageInput) return;
     els.addBgImageInput.value = "";
@@ -6283,6 +6413,7 @@ function refreshI18nDependentUi() {
   refreshHeaderFooterImageSelects();
   refreshNavIconSelects();
   updateLogoInfo();
+  updateFaviconInfo();
   updateBgImageInfo();
   updateHeaderImageInfo();
   updateFooterImageInfo();

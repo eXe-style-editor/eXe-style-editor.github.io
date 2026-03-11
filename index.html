@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EdEX</title>
-  <link rel="icon" type="image/svg+xml" href="app/favicon.svg" />
+  <link id="appDocumentFavicon" rel="icon" type="image/svg+xml" href="app/favicon.svg" />
   <link rel="stylesheet" href="app/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" />
 </head>
@@ -304,6 +304,22 @@
               <label><span data-i18n="quick.logo.marginX">Margen horizontal (px)</span> <input id="logoMarginX" data-quick="logoMarginX" type="number" min="0" max="300" step="1" /></label>
             </div>
             <label><span data-i18n="quick.logo.marginY">Margen vertical (px)</span> <input id="logoMarginY" data-quick="logoMarginY" type="number" min="0" max="300" step="1" /></label>
+          </div>
+        </details>
+
+        <details>
+          <summary><span class="summary-icon material-symbols-outlined" aria-hidden="true">tab_close_right</span><span data-i18n="quick.favicon.summary">Favicon del proyecto exportado</span></summary>
+          <div class="section-content quick-grid">
+            <div class="button-row">
+              <button id="addFaviconBtn" type="button" data-i18n="quick.favicon.addReplace">Añadir/reemplazar favicon</button>
+              <button id="removeFaviconBtn" type="button" data-i18n="quick.favicon.remove">Quitar favicon</button>
+              <input id="addFaviconInput" type="file" accept=".ico,.png,image/x-icon,image/png" hidden />
+            </div>
+            <div id="faviconPreviewWrap" class="binary-preview favicon-preview" hidden>
+              <img id="faviconPreviewImage" alt="Vista previa del favicon" width="32" height="32" />
+            </div>
+            <p id="faviconInfo" class="status-inline" data-i18n="status.noFaviconLoaded">Sin favicon personalizado.</p>
+            <p class="status-inline" data-i18n="quick.favicon.help">eXe usará `img/favicon.ico` o `img/favicon.png` al exportar el proyecto.</p>
           </div>
         </details>
 
@@ -684,7 +700,7 @@
     </div>
   </div>
   <footer class="app-footer">
-    <p>v 1.0.0-beta.8 · © <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">Licencia AGPLv3</a> · <a href="https://github.com/jjdeharo/editor-estilos" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">Repositorio GitHub</a> · <a href="https://github.com/jjdeharo/editor-estilos/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Problemas y sugerencias</a></p>
+    <p>v 1.0.0-beta.9 · © <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">Licencia AGPLv3</a> · <a href="https://github.com/jjdeharo/editor-estilos" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">Repositorio GitHub</a> · <a href="https://github.com/jjdeharo/editor-estilos/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Problemas y sugerencias</a></p>
     <p class="app-footer-note" data-i18n="footer.disclaimer">Proyecto independiente inspirado visualmente en eXeLearning. No esta afiliado ni avalado oficialmente por eXeLearning o INTEF.</p>
   </footer>
 

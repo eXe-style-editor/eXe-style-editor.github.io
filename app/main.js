@@ -585,6 +585,8 @@ function loadAnalyticsSummary() {
 
   const callbackName = `__editorAnalyticsCallback_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
   const script = document.createElement("script");
+  let settled = false;
+  let timeoutId = 0;
   const params = new URLSearchParams();
   const pageUrl = window.location.href;
   const referrer = document.referrer || "";
@@ -599,22 +601,47 @@ function loadAnalyticsSummary() {
     if (value) params.set(key, value);
   });
 
+  const cleanup = () => {
+    if (settled) return;
+    settled = true;
+    if (timeoutId) window.clearTimeout(timeoutId);
+    try {
+      delete window[callbackName];
+    } catch {
+      window[callbackName] = undefined;
+    }
+    script.remove();
+  };
+
   window[callbackName] = (payload) => {
     try {
       updateAnalyticsSummary(payload || {});
     } finally {
-      delete window[callbackName];
-      script.remove();
+      cleanup();
     }
   };
 
   script.async = true;
   script.src = `${cfg.endpoint}${cfg.endpoint.includes("?") ? "&" : "?"}${params.toString()}`;
   script.onerror = () => {
-    delete window[callbackName];
-    script.remove();
+    cleanup();
   };
+  timeoutId = window.setTimeout(cleanup, 4000);
   document.head.appendChild(script);
+}
+
+function scheduleAnalyticsLoad() {
+  if (!shouldTrackAnalytics()) return;
+  const run = () => window.setTimeout(loadAnalyticsSummary, 0);
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(run, { timeout: 2500 });
+    return;
+  }
+  if (document.readyState === "complete") {
+    window.setTimeout(run, 0);
+    return;
+  }
+  window.addEventListener("load", run, { once: true });
 }
 
 const FILE_TYPE_OPTIONS = [
@@ -6995,12 +7022,12 @@ async function loadDefaultBootElpx() {
   if (window.EditorI18n && typeof window.EditorI18n.init === "function") {
     window.EditorI18n.init();
   }
-  loadAnalyticsSummary();
   setupEvents();
   refreshI18nDependentUi();
   window.addEventListener("editor-i18n:changed", refreshI18nDependentUi);
   state.preview = loadPreviewToggles();
   previewToUI(state.preview);
+  scheduleAnalyticsLoad();
   try {
     await loadOfficialStylesCatalog();
     await loadDefaultBootElpx();

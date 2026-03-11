@@ -109,6 +109,79 @@ const LEGACY_COMPAT_STYLE_JS = `
     });
   }
 
+  function syncLegacyHeaderIcons(scope) {
+    const root = scope && typeof scope.querySelectorAll === "function" ? scope : document;
+    const headers = root.querySelectorAll(".box-head, .iDevice_header");
+    headers.forEach((header) => {
+      const icon = header.querySelector(".exe-icon");
+      if (!icon) return;
+      const computed = window.getComputedStyle(header);
+      const bgImage = String(computed.backgroundImage || "").trim().toLowerCase();
+      const hasLegacyBgIcon = bgImage && bgImage !== "none";
+      icon.style.display = hasLegacyBgIcon ? "none" : "";
+    });
+  }
+
+  function normalizeLegacyNoHeaderIconBlocks(scope) {
+    const root = scope && typeof scope.querySelectorAll === "function" ? scope : document;
+    const headers = root.querySelectorAll(".box.no-header .box-head, .box.no-header .iDevice_header");
+    headers.forEach((header) => {
+      const icon = header.querySelector(".exe-icon");
+      if (!(icon instanceof HTMLElement) || icon.style.display === "none") return;
+      const computed = window.getComputedStyle(header);
+      const iconHeight = Math.max(icon.offsetHeight || 0, 48);
+      const currentMinHeight = Number.parseFloat(computed.minHeight || "") || 0;
+      const currentPaddingTop = Number.parseFloat(computed.paddingTop || "") || 0;
+      const currentPaddingBottom = Number.parseFloat(computed.paddingBottom || "") || 0;
+      const targetMinHeight = iconHeight + Math.max(8, currentPaddingTop) + Math.max(8, currentPaddingBottom);
+
+      header.style.overflow = "visible";
+      if (currentPaddingTop < 8) header.style.paddingTop = "8px";
+      if (currentPaddingBottom < 8) header.style.paddingBottom = "8px";
+      if (currentMinHeight < targetMinHeight) {
+        header.style.minHeight = Math.round(targetMinHeight) + "px";
+      }
+    });
+  }
+
+  function normalizeLegacyBoxHeadSpacing(scope) {
+    const root = scope && typeof scope.querySelectorAll === "function" ? scope : document;
+    const headers = root.querySelectorAll(".box .box-head, .iDevice .iDevice_header");
+    headers.forEach((header) => {
+      const content = header.parentElement?.querySelector(":scope > .box-content, :scope > .iDevice_content, :scope > .iDevice_inner")
+        || header.nextElementSibling;
+      if (!(content instanceof HTMLElement) || !header.getBoundingClientRect || !content.getBoundingClientRect) return;
+      const headerRect = header.getBoundingClientRect();
+      const contentRect = content.getBoundingClientRect();
+      const overlap = headerRect.bottom + 8 - contentRect.top;
+      if (overlap > 0) {
+        const currentMarginBottom = Number.parseFloat(window.getComputedStyle(header).marginBottom || "0") || 0;
+        header.style.marginBottom = Math.round(currentMarginBottom + overlap) + "px";
+      }
+    });
+  }
+
+  function normalizeLegacyFooterSpacing(scope) {
+    const root = scope && typeof scope.querySelector === "function" ? scope : document;
+    const footer = root.querySelector("#siteFooter");
+    if (!(footer instanceof HTMLElement) || !footer.getBoundingClientRect) return;
+    const computed = window.getComputedStyle(footer);
+    const marginTop = Number.parseFloat(computed.marginTop || "0") || 0;
+    if (marginTop < 0) footer.style.marginTop = "0";
+    footer.style.clear = "both";
+
+    let previous = footer.previousElementSibling;
+    while (previous && !(previous instanceof HTMLElement)) previous = previous.previousElementSibling;
+    if (!(previous instanceof HTMLElement) || !previous.getBoundingClientRect) return;
+    const prevRect = previous.getBoundingClientRect();
+    const footerRect = footer.getBoundingClientRect();
+    const overlap = prevRect.bottom + 12 - footerRect.top;
+    if (overlap > 0) {
+      const currentMargin = Number.parseFloat(window.getComputedStyle(footer).marginTop || "0") || 0;
+      footer.style.marginTop = Math.round(currentMargin + overlap) + "px";
+    }
+  }
+
   function firstMatch(root, selectors) {
     for (const selector of selectors) {
       const node = root.querySelector(selector);
@@ -156,6 +229,67 @@ const LEGACY_COMPAT_STYLE_JS = `
     parent.appendChild(node);
   }
 
+  function ensureLegacyHeaderIds(host) {
+    if (!host) return;
+    const header = firstMatch(host, [":scope > .package-header", ".package-header"]);
+    const title = header ? header.querySelector(".package-title") : null;
+    const pageHeader = firstMatch(host, [".page-header"]);
+    const pageTitle = pageHeader ? pageHeader.querySelector(".page-title") : null;
+
+    if (header && (!header.id || /^header-/.test(header.id))) header.id = "header";
+    if (title && !title.id) title.id = "headerContent";
+    if (pageHeader && !pageHeader.id) pageHeader.id = "nodeDecoration";
+    if (pageTitle && !pageTitle.id) pageTitle.id = "nodeTitle";
+  }
+
+  function syncLegacyNavState(host) {
+    const body = document.body;
+    if (!body || !host) return;
+    const nav = firstMatch(host, [":scope > #siteNav", "#siteNav"]);
+    const computedHidden = nav ? window.getComputedStyle(nav).display === "none" : body.classList.contains("no-nav") || body.classList.contains("siteNav-off");
+    const collapsed = computedHidden;
+    body.classList.toggle("no-nav", collapsed);
+    body.classList.toggle("siteNav-off", collapsed);
+  }
+
+  function bindLegacyNavToggle(host) {
+    if (!host) return;
+    const body = document.body;
+    if (!body) return;
+    const nav = firstMatch(host, [":scope > #siteNav", "#siteNav"]);
+    if (!nav) return;
+    const toggle = document.getElementById("toggle-nav") || document.getElementById("siteNavToggler");
+    if (!toggle || toggle.dataset.legacyCompatBound === "1") return;
+    toggle.dataset.legacyCompatBound = "1";
+    toggle.addEventListener("click", function () {
+      window.setTimeout(function () {
+        syncLegacyNavState(host);
+        const wrapper = document.getElementById("main-wrapper");
+        syncMainWrapperMinHeight(host, wrapper);
+        ensureHeaderNavSpacing(host);
+      }, 0);
+      window.setTimeout(function () {
+        syncLegacyNavState(host);
+        const wrapper = document.getElementById("main-wrapper");
+        syncMainWrapperMinHeight(host, wrapper);
+        ensureHeaderNavSpacing(host);
+      }, 450);
+    });
+  }
+
+  function observeLegacyBodyClasses(host) {
+    const body = document.body;
+    if (!body || body.dataset.legacyCompatObserver === "1") return;
+    body.dataset.legacyCompatObserver = "1";
+    const observer = new MutationObserver(function () {
+      syncLegacyNavState(host);
+      const wrapper = document.getElementById("main-wrapper");
+      syncMainWrapperMinHeight(host, wrapper);
+      ensureHeaderNavSpacing(host);
+    });
+    observer.observe(body, { attributes: true, attributeFilter: ["class"] });
+  }
+
   function syncMainWrapperMinHeight(host, wrapper) {
     if (!host || !wrapper) return;
     const nav = firstMatch(host, [":scope > #siteNav", "#siteNav"]);
@@ -167,6 +301,63 @@ const LEGACY_COMPAT_STYLE_JS = `
     );
     if (navHeight > 0) {
       wrapper.style.minHeight = (navHeight + 25) + "px";
+    }
+  }
+
+  function normalizeLegacyHeaderHeight(host) {
+    if (!host) return;
+    const header = firstMatch(host, [":scope > .package-header", ".package-header"]);
+    const title = header ? header.querySelector(".package-title") : null;
+    if (!header || !title) return;
+
+    const headerComputed = window.getComputedStyle(header);
+    const explicitHeight = Number.parseFloat(headerComputed.height || "");
+    const headerRect = header.getBoundingClientRect ? header.getBoundingClientRect() : null;
+    const titleRect = title.getBoundingClientRect ? title.getBoundingClientRect() : null;
+    if (!headerRect || !titleRect) return;
+
+    const titleOverflows = titleRect.bottom > (headerRect.bottom - 2);
+    const titleWraps = titleRect.height > Math.max(36, (Number.parseFloat(headerComputed.lineHeight || "") || 24) * 1.45);
+
+    if (titleOverflows || titleWraps) {
+      if (Number.isFinite(explicitHeight) && explicitHeight > 0) {
+        header.style.minHeight = Math.round(explicitHeight) + "px";
+      }
+      header.style.height = "auto";
+    }
+  }
+
+  function ensureLegacyHeaderInset(host) {
+    if (!host) return;
+    const header = firstMatch(host, [":scope > .package-header", ".package-header"]);
+    const title = header ? header.querySelector(".package-title") : null;
+    if (!header || !title || !header.getBoundingClientRect || !title.getBoundingClientRect) return;
+
+    const headerComputed = window.getComputedStyle(header);
+    const currentPaddingLeft = Number.parseFloat(headerComputed.paddingLeft || "0") || 0;
+    if (currentPaddingLeft >= 16) return;
+
+    const headerRect = header.getBoundingClientRect();
+    const titleRect = title.getBoundingClientRect();
+    const leftGap = titleRect.left - headerRect.left;
+    if (leftGap < 12) {
+      header.style.paddingLeft = "20px";
+    }
+  }
+
+  function normalizeLegacyTopHeaderLayout(host) {
+    if (!host) return;
+    const header = firstMatch(host, [":scope > .package-header", ".package-header"]);
+    const nav = firstMatch(host, [":scope > #siteNav", "#siteNav"]);
+    if (!header || !nav) return;
+    if (header.parentElement !== host) return;
+
+    const navComputed = window.getComputedStyle(nav);
+    if (String(navComputed.float || "").toLowerCase() === "left") {
+      header.style.display = "block";
+      header.style.width = "100%";
+      header.style.clear = "both";
+      header.style.boxSizing = "border-box";
     }
   }
 
@@ -216,6 +407,7 @@ const LEGACY_COMPAT_STYLE_JS = `
     mains.forEach((main) => {
       const host = main.closest(".exe-content");
       if (!host) return;
+      ensureLegacyHeaderIds(host);
       const layout = ensureLegacyMainWrapper(main);
       if (!layout) return;
       const { wrapper, inner } = layout;
@@ -223,7 +415,7 @@ const LEGACY_COMPAT_STYLE_JS = `
       const nav = firstMatch(host, [":scope > #siteNav", "#siteNav"]);
       const packageHeader = firstMatch(main, [":scope > .package-header", ".package-header"])
         || firstMatch(host, [":scope > .package-header"]);
-      if (packageHeader) {
+      if (packageHeader && packageHeader.parentElement !== host) {
         host.insertBefore(packageHeader, nav || main);
       }
 
@@ -258,6 +450,12 @@ const LEGACY_COMPAT_STYLE_JS = `
       if (wrapper.parentElement !== main) {
         main.appendChild(wrapper);
       }
+      normalizeLegacyTopHeaderLayout(host);
+      normalizeLegacyHeaderHeight(host);
+      ensureLegacyHeaderInset(host);
+      syncLegacyNavState(host);
+      bindLegacyNavToggle(host);
+      observeLegacyBodyClasses(host);
       syncMainWrapperMinHeight(host, wrapper);
       ensureHeaderNavSpacing(host);
 
@@ -268,6 +466,10 @@ const LEGACY_COMPAT_STYLE_JS = `
       }
     });
     applyToggleFallbackIcons();
+    syncLegacyHeaderIcons(document);
+    normalizeLegacyNoHeaderIconBlocks(document);
+    normalizeLegacyBoxHeadSpacing(document);
+    normalizeLegacyFooterSpacing(document);
   }
 
   if (document.readyState === "loading") {
@@ -276,6 +478,12 @@ const LEGACY_COMPAT_STYLE_JS = `
     relocateLegacyLayout();
   }
   window.addEventListener("load", relocateLegacyLayout, { once: true });
+  window.addEventListener("resize", function () {
+    syncLegacyHeaderIcons(document);
+    normalizeLegacyNoHeaderIconBlocks(document);
+    normalizeLegacyBoxHeadSpacing(document);
+    normalizeLegacyFooterSpacing(document);
+  });
   setTimeout(relocateLegacyLayout, 250);
   setTimeout(relocateLegacyLayout, 900);
   document.addEventListener("click", function (ev) {
@@ -533,6 +741,7 @@ const els = {
   appShell: document.getElementById("appShell"),
   editorPanel: document.getElementById("editorPanel"),
   previewPanel: document.getElementById("previewPanel"),
+  helpLink: document.getElementById("helpLink"),
   busyOverlay: document.getElementById("busyOverlay"),
   busyOverlayText: document.getElementById("busyOverlayText"),
   trialNotice: document.getElementById("trialNotice"),
@@ -580,6 +789,10 @@ const els = {
   clickTextAlphaWrap: document.getElementById("clickTextAlphaWrap"),
   clickPropFontSize: document.getElementById("clickPropFontSize"),
   clickPropFontWeight: document.getElementById("clickPropFontWeight"),
+  clickPropTextAlign: document.getElementById("clickPropTextAlign"),
+  clickTextAlignWrap: document.getElementById("clickTextAlignWrap"),
+  clickPropMarginLeft: document.getElementById("clickPropMarginLeft"),
+  clickPropMarginRight: document.getElementById("clickPropMarginRight"),
   clickTextSizeWrap: document.getElementById("clickTextSizeWrap"),
   clickTextWeightWrap: document.getElementById("clickTextWeightWrap"),
   clickPropWidth: document.getElementById("clickPropWidth"),
@@ -701,6 +914,24 @@ function markDirty() {
 
 function clearDirty() {
   state.isDirty = false;
+}
+
+function getUserManualPathForLang(lang = "es") {
+  switch (String(lang || "").trim().toLowerCase()) {
+    case "en":
+      return "app/help.html?lang=en";
+    case "ca":
+      return "app/help.html?lang=ca";
+    case "es":
+    default:
+      return "app/help.html?lang=es";
+  }
+}
+
+function updateHelpLink() {
+  if (!(els.helpLink instanceof HTMLAnchorElement)) return;
+  const lang = window.EditorI18n?.getLang?.() || document.documentElement.lang || "es";
+  els.helpLink.href = getUserManualPathForLang(lang);
 }
 
 function updateHistoryButtonsState() {
@@ -1070,6 +1301,7 @@ function defaultConfigXml() {
     <title>${escapeXmlText(title)}</title>
     <version>${escapeXmlText(version)}</version>
     <compatibility>${escapeXmlText(compatibility)}</compatibility>
+    <exe-version>${escapeXmlText(compatibility)}</exe-version>
     <author>${escapeXmlText(author)}</author>
     <license>${escapeXmlText(license)}</license>
     <license-url>${escapeXmlText(licenseUrl)}</license-url>
@@ -1101,10 +1333,31 @@ function ensureCoreFilesPresent({ markAsDirty: shouldMarkDirty = false } = {}) {
 }
 
 function compatibilityNumberFromConfigXml(xmlText) {
-  const m = String(xmlText || "").match(/<compatibility>\s*([^<]+)\s*<\/compatibility>/i);
+  const m = String(xmlText || "").match(/<(?:compatibility|exe-version)>\s*([^<]+)\s*<\/(?:compatibility|exe-version)>/i);
   if (!m || !m[1]) return null;
   const n = Number.parseFloat(m[1].trim().replace(",", "."));
   return Number.isFinite(n) ? n : null;
+}
+
+function themeAssetLayoutWarnings(filesIterable) {
+  const paths = Array.from(filesIterable || [], (value) => normalizePath(String(value || ""))).filter(Boolean);
+  const rootCss = paths.filter((path) => /^[^/]+\.css$/i.test(path));
+  const rootJs = paths.filter((path) => /^[^/]+\.js$/i.test(path));
+  const warnings = [];
+  if (rootCss.length > 1) {
+    warnings.push(`El tema tiene varios CSS en raíz (${rootCss.join(", ")}). Los ajustes rápidos solo escriben en style.css.`);
+  }
+  if (rootJs.length > 1) {
+    warnings.push(`El tema tiene varios JS en raíz (${rootJs.join(", ")}). El editor solo mantiene y autocorrige style.js.`);
+  }
+  return warnings;
+}
+
+function appendThemeLayoutWarning(statusText, filesIterable) {
+  const warnings = themeAssetLayoutWarnings(filesIterable);
+  if (!warnings.length) return String(statusText || "");
+  const suffix = ` Aviso: ${warnings.join(" ")}`;
+  return `${String(statusText || "").trim()}${suffix}`.trim();
 }
 
 function cloneBytes(bytes) {
@@ -1343,15 +1596,17 @@ function convertLegacyCssToV3(cssText) {
   }
 
   // Header/title mappings need explicit legacy handling before generic replacements.
-  // In legacy 2.x, #headerContent wrapped the h1; in v3 the h1 itself is .package-title.
+  // Legacy themes used both #header and #headerContent in inconsistent ways across versions/themes.
+  // In v3 the decorative box is .package-header and the title text is .package-title.
   css = css
-    .replace(/header#header\s+#headerContent\s+h1\b/gi, ".exe-content .package-header .package-title")
-    .replace(/#headerContent\s+h1\b/gi, ".exe-content .package-header .package-title")
-    .replace(/#header\s+h1\b/gi, ".exe-content .package-header .package-title")
-    .replace(/#headerContent(?![\w-])/gi, ".exe-content .package-header");
+    .replace(/header#header\s+#headerContent\s+h1\b/gi, ".exe-content .package-title")
+    .replace(/#headerContent\s+h1\b/gi, ".exe-content .package-title")
+    .replace(/#header\s+h1\b/gi, ".exe-content .package-title")
+    .replace(/#headerContent(?![\w-])/gi, ".exe-content .package-title");
 
   // Conservative selector translation: keep content/iDevice styles, avoid legacy layout chrome.
   const selectorMap = [
+    [/#content(?![\w-])/g, ".exe-content"],
     [/#header(?![\w-])/g, ".exe-content .package-header"],
     [/#emptyHeader(?![\w-])/g, ".exe-content .package-header"],
     [/#nodeDecoration(?![\w-])/g, ".exe-content .page-header"],
@@ -1388,6 +1643,7 @@ function upgradeLegacyConfigXmlToV3(xmlText) {
   const compat = compatibilityNumberFromConfigXml(xml);
   if (compat === null || compat < 3) {
     xml = writeConfigField(xml, "compatibility", "3.0");
+    xml = writeConfigField(xml, "exe-version", "3.0");
     notes.push("compatibility actualizada a 3.0");
   }
 
@@ -1482,25 +1738,29 @@ function convertLegacyThemePackageIfNeeded() {
     }
   }
 
+  const legacyRootJs = rootPaths.filter((p) => p.toLowerCase().endsWith(".js") && p.toLowerCase() !== "style.js");
   if (!state.files.has("style.js")) {
-    let adoptedLegacyJs = "";
-    if (moveThemeFile("default.js", "style.js")) {
-      adoptedLegacyJs = "default.js";
-    } else if (moveThemeFile("legacy/default.js", "style.js")) {
-      adoptedLegacyJs = "legacy/default.js";
+    const jsCandidates = [];
+    if (state.files.has("default.js")) jsCandidates.push("default.js");
+    for (const jsPath of legacyRootJs) {
+      if (!jsCandidates.includes(jsPath)) jsCandidates.push(jsPath);
     }
-    if (adoptedLegacyJs) {
-      notes.push(`style.js adoptado automáticamente desde: ${adoptedLegacyJs}`);
+    if (jsCandidates.length) {
+      const mergedLegacyJs = jsCandidates
+        .map((path) => `/* legacy-source-file:${path} */\n${decode(state.files.get(path))}`)
+        .join("\n\n");
+      state.files.set("style.js", encode(mergedLegacyJs));
+      invalidateBlob("style.js");
+      notes.push(`style.js reconstruido automáticamente desde JS legacy: ${jsCandidates.join(", ")}`);
     }
   }
 
-  const legacyRootJs = rootPaths.filter((p) => p.toLowerCase().endsWith(".js") && p.toLowerCase() !== "style.js");
   let movedJs = 0;
   for (const jsPath of legacyRootJs) {
     if (moveThemeFile(jsPath, `legacy/${jsPath}`)) movedJs += 1;
   }
   if (movedJs) {
-    notes.push(`JS legado movido a legacy/: ${movedJs}`);
+    notes.push(`JS legacy movido a legacy/: ${movedJs}`);
   }
 
   if (!state.files.has("screenshot.png") && state.files.has("preview.png")) {
@@ -3017,6 +3277,9 @@ function defaultClickEditProfile() {
   return {
     allowText: true,
     allowBackground: true,
+    allowTextAlign: true,
+    allowMarginLeft: true,
+    allowMarginRight: true,
     allowWidth: true,
     allowMaxWidth: true,
     allowMarginBottom: true,
@@ -3042,6 +3305,9 @@ function profileForElementSelector(selector) {
   const textSafeProfile = {
     allowText: true,
     allowBackground: true,
+    allowTextAlign: true,
+    allowMarginLeft: true,
+    allowMarginRight: true,
     allowWidth: false,
     allowMaxWidth: false,
     allowMarginBottom: false,
@@ -3050,6 +3316,9 @@ function profileForElementSelector(selector) {
   const contentSafeProfile = {
     allowText: true,
     allowBackground: true,
+    allowTextAlign: true,
+    allowMarginLeft: true,
+    allowMarginRight: true,
     allowWidth: false,
     allowMaxWidth: false,
     allowMarginBottom: true,
@@ -3156,11 +3425,19 @@ function currentClickEditDeclarations() {
     if (wasClickEditFieldTouched("fontWeight")) {
       declarations["font-weight"] = String(Number.parseInt(els.clickPropFontWeight?.value || "400", 10) || 400);
     }
+    if (profile.allowTextAlign && wasClickEditFieldTouched("textAlign")) {
+      const textAlign = sanitizeCssValue(els.clickPropTextAlign?.value || "");
+      if (textAlign) declarations["text-align"] = textAlign;
+    }
   }
   const width = sanitizeCssValue(els.clickPropWidth?.value || "");
   const maxWidth = sanitizeCssValue(els.clickPropMaxWidth?.value || "");
+  const marginLeft = sanitizeCssValue(els.clickPropMarginLeft?.value || "");
+  const marginRight = sanitizeCssValue(els.clickPropMarginRight?.value || "");
   const marginBottom = sanitizeCssValue(els.clickPropMarginBottom?.value || "");
   const padding = sanitizeCssValue(els.clickPropPadding?.value || "");
+  if (profile.allowMarginLeft && wasClickEditFieldTouched("marginLeft") && marginLeft) declarations["margin-left"] = marginLeft;
+  if (profile.allowMarginRight && wasClickEditFieldTouched("marginRight") && marginRight) declarations["margin-right"] = marginRight;
   if (profile.allowWidth && wasClickEditFieldTouched("width") && width) declarations.width = width;
   if (profile.allowMaxWidth && wasClickEditFieldTouched("maxWidth") && maxWidth) declarations["max-width"] = maxWidth;
   if (profile.allowMarginBottom && wasClickEditFieldTouched("marginBottom") && marginBottom) declarations["margin-bottom"] = marginBottom;
@@ -3519,9 +3796,21 @@ function fillClickEditModalFromElement(el, selector) {
     const clamped = Number.isFinite(weight) ? Math.max(400, Math.min(800, Math.round(weight / 100) * 100)) : 400;
     els.clickPropFontWeight.value = String(clamped);
   }
+  if (els.clickPropTextAlign) {
+    const textAlign = String(computed.textAlign || "").trim().toLowerCase();
+    els.clickPropTextAlign.value = ["left", "center", "right", "justify"].includes(textAlign) ? textAlign : "left";
+  }
   if (els.clickPropWidth) {
     const width = String(computed.width || "").trim();
     els.clickPropWidth.value = width && width !== "auto" ? width : "";
+  }
+  if (els.clickPropMarginLeft) {
+    const marginLeft = String(computed.marginLeft || "").trim();
+    els.clickPropMarginLeft.value = marginLeft && marginLeft !== "0px" ? marginLeft : "";
+  }
+  if (els.clickPropMarginRight) {
+    const marginRight = String(computed.marginRight || "").trim();
+    els.clickPropMarginRight.value = marginRight && marginRight !== "0px" ? marginRight : "";
   }
   if (els.clickPropMaxWidth) {
     const maxWidth = String(computed.maxWidth || "").trim();
@@ -3541,14 +3830,19 @@ function fillClickEditModalFromElement(el, selector) {
   if (els.clickTextAlphaWrap) els.clickTextAlphaWrap.hidden = !allowText;
   if (els.clickTextSizeWrap) els.clickTextSizeWrap.hidden = !allowText;
   if (els.clickTextWeightWrap) els.clickTextWeightWrap.hidden = !allowText;
+  if (els.clickTextAlignWrap) els.clickTextAlignWrap.hidden = !(allowText && profile.allowTextAlign);
   const bgWrap = getClickEditFieldWrap(els.clickPropBg);
   const bgAlphaWrap = getClickEditFieldWrap(els.clickPropBgAlpha);
+  const marginLeftWrap = getClickEditFieldWrap(els.clickPropMarginLeft);
+  const marginRightWrap = getClickEditFieldWrap(els.clickPropMarginRight);
   const widthWrap = getClickEditFieldWrap(els.clickPropWidth);
   const maxWidthWrap = getClickEditFieldWrap(els.clickPropMaxWidth);
   const marginBottomWrap = getClickEditFieldWrap(els.clickPropMarginBottom);
   const paddingWrap = getClickEditFieldWrap(els.clickPropPadding);
   if (bgWrap) bgWrap.hidden = !profile.allowBackground;
   if (bgAlphaWrap) bgAlphaWrap.hidden = !profile.allowBackground;
+  if (marginLeftWrap) marginLeftWrap.hidden = !profile.allowMarginLeft;
+  if (marginRightWrap) marginRightWrap.hidden = !profile.allowMarginRight;
   if (widthWrap) widthWrap.hidden = !profile.allowWidth;
   if (maxWidthWrap) maxWidthWrap.hidden = !profile.allowMaxWidth;
   if (marginBottomWrap) marginBottomWrap.hidden = !profile.allowMarginBottom;
@@ -4752,7 +5046,7 @@ function parseConfigFields(xmlText) {
     name: get("name"),
     title: get("title"),
     version: get("version"),
-    compatibility: get("compatibility"),
+    compatibility: get("compatibility") || get("exe-version"),
     author: get("author"),
     license: get("license"),
     licenseUrl: get("license-url"),
@@ -4847,7 +5141,9 @@ function saveMetaFields({ showStatus = true } = {}) {
   xml = writeConfigField(xml, "name", els.metaName.value.trim());
   xml = writeConfigField(xml, "title", els.metaTitle.value.trim());
   xml = writeConfigField(xml, "version", els.metaVersion.value.trim());
-  xml = writeConfigField(xml, "compatibility", els.metaCompatibility.value.trim() || "3.0");
+  const compatibility = els.metaCompatibility.value.trim() || "3.0";
+  xml = writeConfigField(xml, "compatibility", compatibility);
+  xml = writeConfigField(xml, "exe-version", compatibility);
   xml = writeConfigField(xml, "author", els.metaAuthor.value.trim());
   xml = writeConfigField(xml, "license", els.metaLicense.value.trim());
   xml = writeConfigField(xml, "license-url", els.metaLicenseUrl.value.trim());
@@ -5113,11 +5409,11 @@ async function loadOfficialStyle(styleId, { showStatus = true, resetFileFilter =
 
   if (showStatus) {
     const label = style.meta?.title || style.id;
-    setStatus(
+    setStatus(appendThemeLayoutWarning(
       applyOverLoadedElpx
         ? i18nText("status.officialTemplateAppliedToElpx", `Plantilla oficial aplicada al ELPX actual: ${label} (${style.id})`, { label, styleId: style.id })
         : i18nText("status.officialTemplateLoaded", `Plantilla oficial cargada: ${label} (${style.id})`, { label, styleId: style.id })
-    );
+    , state.files.keys()));
   }
 }
 
@@ -5199,16 +5495,16 @@ async function loadZip(file) {
     if (importIssues.missingCore.length) parts.push(`faltan obligatorios: ${importIssues.missingCore.join(", ")}`);
     if (importIssues.cssIssues.length) parts.push(`incidencias CSS: ${importIssues.cssIssues.join(" | ")}`);
     if (titleAutofilledFromName) parts.push("title vacío completado automáticamente con name");
-    setStatus(
+    setStatus(appendThemeLayoutWarning(
       applyOverLoadedElpx
         ? i18nText("status.zipAppliedWithIssues", `ZIP aplicado al ELPX con incidencias: ${parts.join(" ; ")}`, { details: parts.join(" ; ") })
         : i18nText("status.zipLoadedWithIssues", `ZIP cargado con incidencias: ${parts.join(" ; ")}`, { details: parts.join(" ; ") })
-    );
+    , state.files.keys()));
   } else {
     const fallbackMsg = titleAutofilledFromName ? i18nText("status.titleAutofilled", " Se completó automáticamente Título con Nombre.") : "";
     const baseMsg = zipStatus || i18nText("status.zipLoaded", `ZIP cargado: ${file.name} (${state.files.size} archivos)`, { fileName: file.name, count: state.files.size });
     const prefix = applyOverLoadedElpx ? i18nText("status.zipAppliedToElpxPrefix", `ZIP aplicado al ELPX: ${file.name}. `, { fileName: file.name }) : "";
-    setStatus(`${prefix}${baseMsg}${fallbackMsg}`);
+    setStatus(appendThemeLayoutWarning(`${prefix}${baseMsg}${fallbackMsg}`, state.files.keys()));
   }
 }
 
@@ -6142,6 +6438,9 @@ function setupEvents() {
     [els.clickPropBgAlpha, "bgAlpha"],
     [els.clickPropFontSize, "fontSize"],
     [els.clickPropFontWeight, "fontWeight"],
+    [els.clickPropTextAlign, "textAlign"],
+    [els.clickPropMarginLeft, "marginLeft"],
+    [els.clickPropMarginRight, "marginRight"],
     [els.clickPropWidth, "width"],
     [els.clickPropMaxWidth, "maxWidth"],
     [els.clickPropMarginBottom, "marginBottom"],
@@ -6581,6 +6880,7 @@ function setupEvents() {
 }
 
 function refreshI18nDependentUi() {
+  updateHelpLink();
   applyControlTooltips();
   setDetachedEditorButtonState();
   refreshFileTypeFilterOptions();

@@ -1,0 +1,143 @@
+:root {
+  --bg: #f2f5f7;
+  --panel: #ffffff;
+  --line: #d6dde3;
+  --ink: #1f2937;
+  --muted: #52606d;
+  --accent: #107275;
+  --accent-soft: #e7f7f7;
+  --code-bg: #f5f7fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: linear-gradient(180deg, #f8fbfc 0%, var(--bg) 100%);
+  color: var(--ink);
+  font-family: "Catamaran", "Noto Sans", "DejaVu Sans", sans-serif;
+}
+
+body {
+  padding: 24px;
+}
+
+.help-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 28px 32px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: 0 16px 40px rgb(15 23 42 / 0.08);
+}
+
+.help-header {
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e7edf2;
+}
+
+.help-kicker {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.help-header h1 {
+  margin: 0;
+  color: #0b5961;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1.08;
+}
+
+.help-content {
+  font-size: 1.08rem;
+  line-height: 1.62;
+}
+
+.help-content h1,
+.help-content h2,
+.help-content h3 {
+  color: #0b5961;
+  line-height: 1.2;
+}
+
+.help-content h1 {
+  margin: 0 0 1rem;
+  font-size: 2rem;
+}
+
+.help-content h2 {
+  margin: 2rem 0 0.9rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid #edf2f5;
+  font-size: 1.45rem;
+}
+
+.help-content h3 {
+  margin: 1.4rem 0 0.7rem;
+  font-size: 1.18rem;
+}
+
+.help-content p {
+  margin: 0 0 1rem;
+}
+
+.help-content ul,
+.help-content ol {
+  margin: 0 0 1rem 1.4rem;
+  padding: 0;
+}
+
+.help-content li {
+  margin: 0.3rem 0;
+}
+
+.help-content code {
+  padding: 0.08rem 0.35rem;
+  border-radius: 0.35rem;
+  background: var(--code-bg);
+  border: 1px solid #e6ebef;
+  font-size: 0.95em;
+  font-family: "DejaVu Sans Mono", "Noto Sans Mono", monospace;
+}
+
+.help-content a {
+  color: #0f6f8a;
+}
+
+.help-status {
+  margin: 0;
+  color: var(--muted);
+}
+
+.help-error {
+  padding: 14px 16px;
+  border: 1px solid #efc1bc;
+  border-radius: 10px;
+  background: #fff3f1;
+  color: #8a2f22;
+}
+
+@media (max-width: 720px) {
+  body {
+    padding: 12px;
+  }
+
+  .help-shell {
+    padding: 18px 18px 24px;
+    border-radius: 14px;
+  }
+
+  .help-content {
+    font-size: 1rem;
+  }
+}

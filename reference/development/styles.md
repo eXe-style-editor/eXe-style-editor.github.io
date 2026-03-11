@@ -199,6 +199,31 @@ If this area is revisited, prefer improving the selector-equivalence matching ra
 
 ---
 
+## EdEX Maintenance Note: Theme File Coverage
+
+eXe can load multiple `.css` and `.js` files from the theme root.
+
+EdEX currently:
+
+- preserves and exports all files found in the theme ZIP
+- edits `style.css` as the main CSS entry point
+- maintains and may autocreate `style.js` for compatibility and legacy fixes
+
+This means multi-file themes are supported for packaging, but not fully understood at the same editing level.
+
+### Practical rule
+
+If a theme contains multiple root CSS or JS files:
+
+- do not discard them
+- do not rewrite them automatically
+- warn the user that safe controls only write to `style.css`
+- warn the user that JS maintenance/autofix only targets `style.js`
+
+This is intentional and safer than trying to merge logic across arbitrary extra files.
+
+---
+
 ## Final Recommendations
 
 - Export in different formats: **SCORM, Web, Single HTML Page** to test compatibility.

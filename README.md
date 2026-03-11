@@ -2,7 +2,7 @@
 
 Editor web para crear, ajustar y exportar estilos (`.zip`) compatibles con eXeLearning.
 
-Versión actual: `v 1.0.0-beta.8`
+Versión actual: `v 1.0.0-beta.11`
 
 ## Qué hace
 
@@ -16,24 +16,47 @@ Versión actual: `v 1.0.0-beta.8`
 - Incluye ajustes avanzados de títulos (página, proyecto e iDevice) en la UI.
 - Actualiza `screenshot.png` automáticamente al exportar (si falla, conserva el existente).
 - Exporta ZIP listo para importar en eXeLearning.
+- Permite editar visualmente elementos concretos desde la previsualización mediante clic.
+- Puede importar muchos estilos legacy de eXe 2.x y convertirlos a un formato moderno editable.
+- Permite cargar y exportar proyectos ELPX modificando el estilo embebido.
 - Incluye aviso inicial de fase de pruebas (se muestra una sola vez y se recuerda).
+
+## Documentación de usuario
+
+Guía de uso recomendada:
+
+- [Manual de usuario (es)](./reference/user/manual.md)
+- [User manual (en)](./reference/user/manual.en.md)
+- [Manual d'usuari (ca)](./reference/user/manual.ca.md)
+
+Incluye:
+
+- carga de plantillas, ZIP y ELPX
+- ajustes rápidos
+- edición por clic
+- trabajo con archivos
+- exportación ZIP y ELPX
+- compatibilidad con estilos legacy 2.x
+- límites y recomendaciones prácticas
 
 ## Flujo recomendado
 
-1. En **Proyecto > Cargar plantilla**, carga un ZIP o elige una plantilla oficial.
+1. Carga una plantilla oficial, un ZIP o un ELPX.
 2. Ajusta visualmente en **Ajustes** y/o edita archivos en **Archivos**.
-3. Completa **Proyecto > Información y exportación**.
-4. Si partiste de plantilla oficial, cambia al menos:
+3. Usa la edición por clic si necesitas retocar un elemento concreto.
+4. Completa **Proyecto > Información y exportación**.
+5. Si partiste de plantilla oficial, cambia al menos:
    - `Nombre`
    - `Título`
-5. Exporta ZIP.
+6. Exporta ZIP o ELPX, según el caso.
 
 ## Notas de compatibilidad
 
-- La previsualización del editor es simulada: la validación final debe hacerse en eXeLearning.
+- La validación final conviene hacerla en eXeLearning, sobre todo en estilos legacy.
 - El editor intenta aplicar cambios automáticos de forma segura.
 - Si `downloadable=0`, el estilo se puede editar aquí, pero no será importable desde la interfaz de eXe.
 - Los enlaces dentro de la previsualización están desactivados para evitar navegación accidental.
+- En temas con varios `.css` o varios `.js` en raíz, el editor los conserva, pero los ajustes rápidos escriben sobre `style.css`.
 
 ## Modo seguro (automático)
 

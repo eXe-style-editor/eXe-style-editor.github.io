@@ -175,6 +175,37 @@ body {
   gap: 12px;
 }
 
+.panel-header-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  min-width: 34px;
+  padding: 0 8px;
+  border: 1px solid #cfe1e6;
+  border-radius: 999px;
+  background: #f4fbfb;
+  color: var(--action-dark);
+  text-decoration: none;
+}
+
+.header-link .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
+.header-link:hover,
+.header-link:focus-visible {
+  background: #e8f7f7;
+  border-color: #9fd4d6;
+  color: #0a5c5e;
+}
+
 .lang-select-wrap {
   display: inline-flex;
   align-items: center;
@@ -335,6 +366,18 @@ body {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 0.95rem;
+}
+
+@media (max-width: 760px) {
+  .panel-header-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .panel-header-tools {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 .tabs {

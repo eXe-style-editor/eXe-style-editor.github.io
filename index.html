@@ -18,12 +18,24 @@
       <header class="panel-header">
         <div class="panel-header-top">
           <h1><img class="app-title-logo" src="app/favicon.svg" alt="" aria-hidden="true" /><span data-i18n="header.title">EdEX</span></h1>
-          <div id="appLanguageWrap" class="lang-select-wrap">
-            <select id="appLanguageSelect">
-              <option value="en">English</option>
-              <option value="es">Español</option>
-              <option value="ca">Català</option>
-            </select>
+          <div class="panel-header-tools">
+            <a
+              id="helpLink"
+              class="header-link"
+              href="app/help.html?lang=es"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-i18n-title="header.helpTitle"
+              data-i18n-aria-label="header.helpTitle"
+              title="Abrir ayuda de uso"
+            ><span class="material-symbols-outlined" aria-hidden="true">help</span></a>
+            <div id="appLanguageWrap" class="lang-select-wrap">
+              <select id="appLanguageSelect">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="ca">Català</option>
+              </select>
+            </div>
           </div>
         </div>
         <p data-i18n="header.subtitle">Editor de estilos de eXeLearning</p>
@@ -84,7 +96,7 @@
             <label><span data-i18n="meta.name">Nombre</span> <input id="metaName" type="text" /></label>
             <label><span data-i18n="meta.title">Título</span> <input id="metaTitle" type="text" /></label>
             <label><span data-i18n="meta.version">Versión</span> <input id="metaVersion" type="text" /></label>
-            <label><span data-i18n="meta.compatibility">Compatibilidad</span> <input id="metaCompatibility" type="text" placeholder="3.0" /></label>
+            <label><span data-i18n="meta.compatibility">Compatibilidad</span> <input id="metaCompatibility" type="text" placeholder="3.0" value="3.0" readonly /></label>
             <label><span data-i18n="meta.author">Autor</span> <input id="metaAuthor" type="text" /></label>
             <label><span data-i18n="meta.license">Licencia</span> <input id="metaLicense" type="text" placeholder="Creative Commons by-sa" /></label>
             <label><span data-i18n="meta.licenseUrl">URL licencia</span> <input id="metaLicenseUrl" type="url" placeholder="https://..." /></label>
@@ -638,6 +650,25 @@
         </label>
       </div>
       <div class="inline-two click-edit-grid">
+        <label id="clickTextAlignWrap"><span data-i18n="clickEdit.textAlign">Alineación texto</span>
+          <select id="clickPropTextAlign">
+            <option value="left" data-i18n="clickEdit.alignLeft">Izquierda</option>
+            <option value="center" data-i18n="clickEdit.alignCenter">Centro</option>
+            <option value="right" data-i18n="clickEdit.alignRight">Derecha</option>
+            <option value="justify" data-i18n="clickEdit.alignJustify">Justificado</option>
+          </select>
+        </label>
+        <label><span data-i18n="clickEdit.marginLeft">Margen izquierdo (`margin-left`, px y %)</span>
+          <input id="clickPropMarginLeft" type="text" placeholder="Ej.: 20px, 5% o auto" data-i18n-placeholder="clickEdit.marginSidePlaceholder" />
+        </label>
+      </div>
+      <div class="inline-two click-edit-grid">
+        <label><span data-i18n="clickEdit.marginRight">Margen derecho (`margin-right`, px y %)</span>
+          <input id="clickPropMarginRight" type="text" placeholder="Ej.: 20px, 5% o auto" data-i18n-placeholder="clickEdit.marginSidePlaceholder" />
+        </label>
+        <div></div>
+      </div>
+      <div class="inline-two click-edit-grid">
         <label><span data-i18n="clickEdit.width">Ancho (`width`, px y %)</span>
           <input id="clickPropWidth" type="text" placeholder="Ej.: 320px o 80%" data-i18n-placeholder="clickEdit.widthPlaceholder" />
         </label>
@@ -701,7 +732,7 @@
     </div>
   </div>
   <footer class="app-footer">
-    <p>v 1.0.0-beta.10 · © <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">Licencia AGPLv3</a> · <a href="https://github.com/jjdeharo/editor-estilos" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">Repositorio GitHub</a> · <a href="https://github.com/jjdeharo/editor-estilos/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Problemas y sugerencias</a></p>
+    <p>v 1.0.0-beta.11 · © <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">Licencia AGPLv3</a> · <a href="https://github.com/jjdeharo/editor-estilos" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">Repositorio GitHub</a> · <a href="https://github.com/jjdeharo/editor-estilos/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Problemas y sugerencias</a></p>
     <p class="app-footer-note" data-i18n="footer.disclaimer">Proyecto independiente inspirado visualmente en eXeLearning. No esta afiliado ni avalado oficialmente por eXeLearning o INTEF.</p>
   </footer>
 

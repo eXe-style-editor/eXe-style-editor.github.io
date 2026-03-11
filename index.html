@@ -4,20 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EdEX</title>
-  <script>
-    (function () {
-      const oldHost = "jjdeharo.github.io";
-      const oldBase = "/editor-estilos";
-      const newOrigin = "https://exe-style-editor.github.io";
-      if (window.location.hostname !== oldHost) return;
-      if (!window.location.pathname.startsWith(oldBase)) return;
-      const suffix = window.location.pathname.slice(oldBase.length) || "/";
-      const target = new URL(suffix, `${newOrigin}/`);
-      target.search = window.location.search;
-      target.hash = window.location.hash;
-      window.location.replace(target.toString());
-    })();
-  </script>
   <link id="appDocumentFavicon" rel="icon" type="image/svg+xml" href="app/favicon.svg" />
   <link rel="stylesheet" href="app/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css" />
@@ -746,7 +732,7 @@
     </div>
   </div>
   <footer class="app-footer">
-    <p>v 1.0.0-beta.11 · © <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">Licencia AGPLv3</a> · <a href="https://github.com/jjdeharo/editor-estilos" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">Repositorio GitHub</a> · <a href="https://github.com/jjdeharo/editor-estilos/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Problemas y sugerencias</a></p>
+    <p>v 1.0.0-beta.11 · © <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">Licencia AGPLv3</a> · <a href="https://github.com/eXe-style-editor/eXe-style-editor.github.io" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">Repositorio GitHub</a> · <a href="https://github.com/eXe-style-editor/eXe-style-editor.github.io/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Problemas y sugerencias</a></p>
     <p class="app-footer-note" data-i18n="footer.disclaimer">Proyecto independiente inspirado visualmente en eXeLearning. No esta afiliado ni avalado oficialmente por eXeLearning o INTEF.</p>
   </footer>
 

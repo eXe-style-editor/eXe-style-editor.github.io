@@ -1,5 +1,11 @@
 # AGENTS.md
 
+## Repositorio canónico
+- Repositorio público canónico: `eXe-style-editor/eXe-style-editor.github.io`.
+- URL pública canónica: `https://eXe-style-editor.github.io/`.
+- Usar solo el repo canónico en referencias, enlaces, documentación y publicación.
+- No introducir referencias nuevas al repo antiguo.
+
 ## Contexto del proyecto
 Editor web local para crear, previsualizar y exportar estilos de eXeLearning.
 Prioridad acordada: **compatibilidad real con eXeLearning** y cambios automáticos seguros para usuarios no técnicos.
@@ -17,6 +23,7 @@ Prioridad acordada: **compatibilidad real con eXeLearning** y cambios automátic
 - `app/official-styles.json`: catálogo de plantillas oficiales (`base`, `flux`, `neo`, `nova`, `universal`, `zen`).
 - `reference/development/styles.md`: referencia de campos y empaquetado de estilos eXe.
 - `reference/themes/official/`: copia de estilos oficiales para comparación y pruebas.
+- Repo local de eXeLearning ya disponible para consulta (no clonar de nuevo): `/home/jjdeharo/Documentos/github/exelearning/`.
 
 ## Funcionalidades implementadas
 - Carga de plantilla oficial y carga de ZIP.

@@ -521,6 +521,7 @@ const ELPX_URL_PREFIX = `${APP_BASE_PATH}__elpx/`;
 const ELPX_CACHE_PREFIX = "editor-estilos:elpx:";
 const ANALYTICS_FALLBACK_ENDPOINT = "https://bilateria.org/app/estadistica/editor-estilos/track.php";
 const ANALYTICS_FALLBACK_STATS_URL = "https://bilateria.org/app/estadistica/editor-estilos/admin-stats.php";
+const ANALYTICS_VISIT_COOLDOWN_MS = 30 * 60 * 1000;
 
 function i18nText(key, fallback, params = {}) {
   const i18n = window.EditorI18n;
@@ -552,6 +553,30 @@ function getAnalyticsConfig() {
     statsUrl: getMetaContent("analytics-stats-url") || ANALYTICS_FALLBACK_STATS_URL,
     siteId: getMetaContent("analytics-site-id") || "editor-estilos"
   };
+}
+
+function getAnalyticsVisitStorageKey(siteId) {
+  return `analytics:last-visit:${siteId}`;
+}
+
+function shouldCountAnalyticsVisit(siteId) {
+  try {
+    const lastVisit = Number.parseInt(window.localStorage.getItem(getAnalyticsVisitStorageKey(siteId)) || "", 10);
+    if (Number.isFinite(lastVisit) && Date.now() - lastVisit < ANALYTICS_VISIT_COOLDOWN_MS) {
+      return false;
+    }
+  } catch {
+    return true;
+  }
+  return true;
+}
+
+function rememberAnalyticsVisit(siteId) {
+  try {
+    window.localStorage.setItem(getAnalyticsVisitStorageKey(siteId), String(Date.now()));
+  } catch {
+    // Ignore storage failures and keep analytics best-effort.
+  }
 }
 
 function shouldTrackAnalytics() {
@@ -591,11 +616,13 @@ function loadAnalyticsSummary() {
   const pageUrl = window.location.href;
   const referrer = document.referrer || "";
   const pageParams = new URLSearchParams(window.location.search || "");
+  const shouldCountVisit = shouldCountAnalyticsVisit(cfg.siteId);
 
   params.set("site", cfg.siteId);
   params.set("callback", callbackName);
   params.set("page_url", pageUrl);
   params.set("referrer", referrer);
+  if (!shouldCountVisit) params.set("summary_only", "1");
   ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"].forEach((key) => {
     const value = String(pageParams.get(key) || "").trim();
     if (value) params.set(key, value);
@@ -616,6 +643,7 @@ function loadAnalyticsSummary() {
   window[callbackName] = (payload) => {
     try {
       updateAnalyticsSummary(payload || {});
+      if (shouldCountVisit && payload && payload.ok) rememberAnalyticsVisit(cfg.siteId);
     } finally {
       cleanup();
     }

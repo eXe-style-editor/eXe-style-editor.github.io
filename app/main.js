@@ -2449,17 +2449,41 @@ function writeClickOverridesBlock(css, blockText) {
   return `${base}\n\n${CLICK_OVERRIDES_START}\n${body}\n${CLICK_OVERRIDES_END}\n`;
 }
 
+function parseClickOverrideDeclarationsObject(declarationsText) {
+  const parsed = {};
+  for (const chunk of String(declarationsText || "").split(";")) {
+    const line = String(chunk || "").trim();
+    if (!line) continue;
+    const colon = line.indexOf(":");
+    if (colon <= 0) continue;
+    const prop = line.slice(0, colon).trim().toLowerCase();
+    const value = line.slice(colon + 1).trim().replace(/\s*!important\s*$/i, "").trim();
+    if (!prop || !value) continue;
+    parsed[prop] = value;
+  }
+  return parsed;
+}
+
 function upsertClickOverrideRule(css, selector, declarations) {
   const cleanSelector = String(selector || "").trim();
   if (!cleanSelector || !declarations || typeof declarations !== "object") return css;
-  const lines = [];
+  let block = getClickOverridesBlock(css).trim();
+  const selectorRe = new RegExp(`${escapeRegExp(cleanSelector)}\\s*\\{[\\s\\S]*?\\}`, "i");
+  const existingMatch = block.match(selectorRe);
+  const existingDeclarations = existingMatch
+    ? parseClickOverrideDeclarationsObject(existingMatch[0].replace(/^[^{]*\{|\}$/g, ""))
+    : {};
+  const mergedDeclarations = { ...existingDeclarations };
   for (const [prop, value] of Object.entries(declarations)) {
+    if (!value) continue;
+    mergedDeclarations[prop] = value;
+  }
+  const lines = [];
+  for (const [prop, value] of Object.entries(mergedDeclarations)) {
     if (!value) continue;
     lines.push(`  ${prop}: ${value} !important;`);
   }
   if (!lines.length) return css;
-  let block = getClickOverridesBlock(css).trim();
-  const selectorRe = new RegExp(`${escapeRegExp(cleanSelector)}\\s*\\{[\\s\\S]*?\\}`, "i");
   block = block.replace(selectorRe, "").trim();
   const rule = `${cleanSelector} {\n${lines.join("\n")}\n}`;
   block = block ? `${block}\n\n${rule}` : rule;

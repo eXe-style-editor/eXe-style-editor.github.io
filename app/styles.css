@@ -1252,6 +1252,18 @@ textarea:focus-visible {
   margin: 0;
 }
 
+.app-footer-stats {
+  margin-top: 4px !important;
+  font-size: 0.83rem;
+}
+
+.app-footer-stats strong {
+  color: #174d4d;
+}
+
+.app-footer-sep {
+  padding: 0 0.25rem;
+}
 
 .app-footer-note {
   margin-top: 4px;

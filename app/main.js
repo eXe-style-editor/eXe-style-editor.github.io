@@ -585,24 +585,6 @@ function shouldTrackAnalytics() {
   return host !== "localhost" && host !== "127.0.0.1" && host !== "::1" && !host.endsWith(".local");
 }
 
-function updateAnalyticsSummary(data) {
-  const summary = document.getElementById("analyticsSummary");
-  const totalEl = document.getElementById("analyticsTotalValue");
-  const todayEl = document.getElementById("analyticsTodayValue");
-  const linkEl = document.getElementById("analyticsStatsLink");
-  if (!(summary instanceof HTMLElement) || !(totalEl instanceof HTMLElement) || !(todayEl instanceof HTMLElement)) return;
-  const total = Number.parseInt(String(data?.total ?? ""), 10);
-  const today = Number.parseInt(String(data?.today ?? ""), 10);
-  if (!Number.isFinite(total) || !Number.isFinite(today)) return;
-  totalEl.textContent = String(total);
-  todayEl.textContent = String(today);
-  const cfg = getAnalyticsConfig();
-  if (linkEl instanceof HTMLAnchorElement && cfg.statsUrl) {
-    linkEl.href = cfg.statsUrl;
-  }
-  summary.hidden = false;
-}
-
 function loadAnalyticsSummary() {
   if (!shouldTrackAnalytics()) return;
   const cfg = getAnalyticsConfig();
@@ -642,7 +624,6 @@ function loadAnalyticsSummary() {
 
   window[callbackName] = (payload) => {
     try {
-      updateAnalyticsSummary(payload || {});
       if (shouldCountVisit && payload && payload.ok) rememberAnalyticsVisit(cfg.siteId);
     } finally {
       cleanup();

@@ -276,6 +276,7 @@ window.$i18n.ca = {
   "footer.analytics.visits": "Visites",
   "footer.analytics.today": "Avui",
   "footer.analytics.details": "Estadístiques",
+  "footer.analyticsLink": "Privadesa",
   "footer.analyticsNotice": "Aquesta aplicació recull únicament estadístiques d’ús agregades amb un sistema propi per conèixer-ne la utilització i millorar l’eina. No s’emmagatzemen adreces IP ni s’utilitzen cookies d’analítica per als visitants.",
   "footer.disclaimer": "Projecte independent inspirat visualment en eXeLearning. No esta afiliat ni avalat oficialment per eXeLearning o INTEF.",
   "quick.titles.compactNoHeader": "Reduir l'espai superior en iDevices sense títol",

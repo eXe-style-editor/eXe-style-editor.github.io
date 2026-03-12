@@ -1270,6 +1270,24 @@ textarea:focus-visible {
   font-size: 0.8rem;
 }
 
+.app-footer-disclosure {
+  margin-top: 4px;
+}
+
+.app-footer-disclosure summary {
+  display: inline-block;
+  cursor: pointer;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.app-footer-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
 .app-footer a {
   color: inherit;
 }

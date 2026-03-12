@@ -278,7 +278,7 @@ window.$i18n.es = {
   "footer.analytics.details": "Estadísticas",
   "footer.analyticsLink": "Privacidad",
   "footer.analyticsNotice": "Esta aplicación recoge únicamente estadísticas de uso agregadas con un sistema propio para conocer su utilización y mejorar la herramienta. No se almacenan direcciones IP ni se usan cookies de analítica para los visitantes.",
-  "footer.analyticsNoticeCompact": "Estadísticas propias agregadas, sin IP ni cookies de analítica.",
+  "footer.analyticsNoticeCompact": "Los archivos se procesan localmente en este navegador. Solo se recogen estadísticas de uso agregadas propias y no se envían archivos ni datos a terceros.",
   "footer.disclaimer": "Proyecto independiente inspirado visualmente en eXeLearning. No esta afiliado ni avalado oficialmente por eXeLearning o INTEF.",
   "footer.disclaimerCompact": "Proyecto independiente, sin afiliación oficial con eXeLearning o INTEF.",
   "quick.titles.compactNoHeader": "Reducir el espacio superior en iDevices sin título",

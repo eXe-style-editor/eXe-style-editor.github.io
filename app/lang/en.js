@@ -278,7 +278,7 @@ window.$i18n.en = {
   "footer.analytics.details": "Stats",
   "footer.analyticsLink": "Privacy",
   "footer.analyticsNotice": "This application only collects aggregated usage statistics with an in-house system to understand how it is used and improve the tool. No IP addresses are stored and no analytics cookies are used for visitors.",
-  "footer.analyticsNoticeCompact": "In-house aggregated statistics only, with no IP storage or analytics cookies.",
+  "footer.analyticsNoticeCompact": "Files are processed locally in this browser. Only in-house aggregated usage statistics are collected, and no files or data are sent to third parties.",
   "footer.disclaimer": "Independent project visually inspired by eXeLearning. It is not officially affiliated with or endorsed by eXeLearning or INTEF.",
   "footer.disclaimerCompact": "Independent project, with no official affiliation with eXeLearning or INTEF.",
   "quick.titles.compactNoHeader": "Reduce top space in untitled iDevices",

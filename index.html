@@ -736,23 +736,27 @@
   </div>
   <footer class="app-footer">
     <p class="app-footer-line">
-      <span>v 1.0.0-beta.11 · © <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">Licencia AGPLv3</a> · <a href="https://github.com/eXe-style-editor/eXe-style-editor.github.io" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">Repositorio GitHub</a></span>
+      <span>v 1.0.0-beta.11 · © <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">AGPLv3</a> · <a href="https://github.com/eXe-style-editor/eXe-style-editor.github.io" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">GitHub</a></span>
     </p>
     <p class="app-footer-line app-footer-line--secondary">
-      <a href="https://github.com/eXe-style-editor/eXe-style-editor.github.io/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Problemas y sugerencias</a>
-      <span id="analyticsSummary" class="app-footer-stats" hidden>
+      <span id="footerMetaDefault">
+        <a href="https://github.com/eXe-style-editor/eXe-style-editor.github.io/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Problemas y sugerencias</a>
+        <span id="analyticsSummary" class="app-footer-stats" hidden>
+          <span class="app-footer-sep">·</span>
+          <span data-i18n="footer.analytics.visits">Visitas</span> <strong id="analyticsTotalValue">-</strong>
+          <span class="app-footer-sep">·</span>
+          <span data-i18n="footer.analytics.today">Hoy</span> <strong id="analyticsTodayValue">-</strong>
+        </span>
         <span class="app-footer-sep">·</span>
-        <span data-i18n="footer.analytics.visits">Visitas</span> <strong id="analyticsTotalValue">-</strong>
+        <span class="app-footer-note app-footer-note--inline" data-i18n="footer.disclaimerCompact">Proyecto independiente, sin afiliación oficial con eXeLearning o INTEF.</span>
         <span class="app-footer-sep">·</span>
-        <span data-i18n="footer.analytics.today">Hoy</span> <strong id="analyticsTodayValue">-</strong>
+        <button id="footerPrivacyToggle" class="app-footer-link" type="button" data-i18n="footer.analyticsLink" aria-expanded="false" aria-controls="footerPrivacyMessage">Privacidad</button>
       </span>
-      <span class="app-footer-sep">·</span>
-      <details class="app-footer-disclosure">
-        <summary data-i18n="footer.analyticsLink">Privacidad</summary>
-        <span class="app-footer-note app-footer-note--inline" data-i18n="footer.analyticsNotice">Esta aplicación recoge únicamente estadísticas de uso agregadas con un sistema propio para conocer su utilización y mejorar la herramienta. No se almacenan direcciones IP ni se usan cookies de analítica para los visitantes.</span>
-      </details>
-      <span class="app-footer-sep">·</span>
-      <span class="app-footer-note app-footer-note--inline" data-i18n="footer.disclaimer">Proyecto independiente inspirado visualmente en eXeLearning. No esta afiliado ni avalado oficialmente por eXeLearning o INTEF.</span>
+      <span id="footerPrivacyMessage" hidden>
+        <span data-i18n="footer.analyticsNoticeCompact">Estadísticas agregadas propias, sin IP ni cookies de analítica para visitantes.</span>
+        <span class="app-footer-sep">·</span>
+        <button id="footerPrivacyClose" class="app-footer-link" type="button" data-i18n="footer.analyticsHide">Ocultar</button>
+      </span>
     </p>
   </footer>
 

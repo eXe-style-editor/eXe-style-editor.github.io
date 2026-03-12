@@ -1244,8 +1244,8 @@ textarea:focus-visible {
   padding: 4px 12px 6px;
   text-align: center;
   color: var(--muted);
-  font-size: 0.86rem;
-  line-height: 1.35;
+  font-size: 0.82rem;
+  line-height: 1.25;
 }
 
 .app-footer-line {
@@ -1269,25 +1269,7 @@ textarea:focus-visible {
 }
 
 .app-footer-note {
-  font-size: 0.78rem;
-}
-
-.app-footer-disclosure {
-  display: inline;
-}
-
-.app-footer-disclosure summary {
-  display: inline;
-  cursor: pointer;
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: 0.12em;
-  list-style: none;
-  font-size: 0.78rem;
-}
-
-.app-footer-disclosure summary::-webkit-details-marker {
-  display: none;
+  font-size: 0.74rem;
 }
 
 .app-footer-note--inline {
@@ -1295,7 +1277,19 @@ textarea:focus-visible {
 }
 
 .app-footer-line--secondary {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
+  min-height: 1.1rem;
+}
+
+.app-footer-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
 }
 
 .app-footer a {

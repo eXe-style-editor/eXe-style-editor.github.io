@@ -7029,6 +7029,25 @@ function refreshI18nDependentUi() {
   syncDetachedEditorFromMain();
 }
 
+function initFooterPrivacyToggle() {
+  const toggle = document.getElementById("footerPrivacyToggle");
+  const close = document.getElementById("footerPrivacyClose");
+  const defaultLine = document.getElementById("footerMetaDefault");
+  const message = document.getElementById("footerPrivacyMessage");
+  if (!(toggle instanceof HTMLButtonElement) || !(close instanceof HTMLButtonElement)) return;
+  if (!(defaultLine instanceof HTMLElement) || !(message instanceof HTMLElement)) return;
+
+  function setOpen(open) {
+    defaultLine.hidden = open;
+    message.hidden = !open;
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  toggle.addEventListener("click", () => setOpen(true));
+  close.addEventListener("click", () => setOpen(false));
+  setOpen(false);
+}
+
 async function loadDefaultBootElpx() {
   const response = await fetch(DEFAULT_BOOT_ELPX_URL, { cache: "no-store" });
   if (!response.ok) {
@@ -7051,6 +7070,7 @@ async function loadDefaultBootElpx() {
     window.EditorI18n.init();
   }
   setupEvents();
+  initFooterPrivacyToggle();
   refreshI18nDependentUi();
   window.addEventListener("editor-i18n:changed", refreshI18nDependentUi);
   state.preview = loadPreviewToggles();

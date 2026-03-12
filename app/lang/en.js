@@ -276,6 +276,7 @@ window.$i18n.en = {
   "footer.analytics.visits": "Visits",
   "footer.analytics.today": "Today",
   "footer.analytics.details": "Stats",
+  "footer.analyticsNotice": "This application only collects aggregated usage statistics with an in-house system to understand how it is used and improve the tool. No IP addresses are stored and no analytics cookies are used for visitors.",
   "footer.disclaimer": "Independent project visually inspired by eXeLearning. It is not officially affiliated with or endorsed by eXeLearning or INTEF.",
   "quick.titles.compactNoHeader": "Reduce top space in untitled iDevices",
   "quick.titles.summary": "Page and project titles",

@@ -5,6 +5,8 @@
 - URL pública canónica: `https://eXe-style-editor.github.io/`.
 - Usar solo el repo canónico en referencias, enlaces, documentación y publicación.
 - No introducir referencias nuevas al repo antiguo.
+- No publicar nunca en `jjdeharo/editor-estilos.git`.
+- Si existe un remoto `legacy`, debe conservarse solo como referencia histórica o redirección, nunca como destino de publicación.
 
 ## Contexto del proyecto
 Editor web local para crear, previsualizar y exportar estilos de eXeLearning.

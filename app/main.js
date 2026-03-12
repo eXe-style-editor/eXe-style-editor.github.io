@@ -7031,20 +7031,31 @@ function refreshI18nDependentUi() {
 
 function initFooterPrivacyToggle() {
   const toggle = document.getElementById("footerPrivacyToggle");
-  const close = document.getElementById("footerPrivacyClose");
-  const defaultLine = document.getElementById("footerMetaDefault");
   const message = document.getElementById("footerPrivacyMessage");
-  if (!(toggle instanceof HTMLButtonElement) || !(close instanceof HTMLButtonElement)) return;
-  if (!(defaultLine instanceof HTMLElement) || !(message instanceof HTMLElement)) return;
+  if (!(toggle instanceof HTMLAnchorElement)) return;
+  if (!(message instanceof HTMLElement)) return;
 
   function setOpen(open) {
-    defaultLine.hidden = open;
     message.hidden = !open;
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
   }
 
-  toggle.addEventListener("click", () => setOpen(true));
-  close.addEventListener("click", () => setOpen(false));
+  toggle.addEventListener("click", (event) => {
+    event.preventDefault();
+    setOpen(message.hidden);
+  });
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+    if (target === toggle || message.contains(target)) return;
+    setOpen(false);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setOpen(false);
+  });
+
   setOpen(false);
 }
 

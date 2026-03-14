@@ -1260,6 +1260,10 @@ textarea:focus-visible {
   font-size: 0.83rem;
 }
 
+.app-footer-stats--hidden {
+  display: none !important;
+}
+
 .app-footer-stats strong {
   color: #174d4d;
 }

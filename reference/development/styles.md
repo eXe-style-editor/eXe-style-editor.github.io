@@ -222,6 +222,20 @@ If a theme contains multiple root CSS or JS files:
 
 This is intentional and safer than trying to merge logic across arbitrary extra files.
 
+## TinyMCE Editor Compatibility
+
+If the goal is that a theme change is visible inside the eXeLearning editor, use `style.css` as the compatibility point.
+
+TinyMCE does not currently load a theme-specific `editor.css`. In practice:
+
+- rules that must also be visible while editing should exist in `style.css`
+- rules may need a TinyMCE-specific version using `body#tinymce`
+- extra root CSS files may still be preserved for export, but should not be the only place for editor-critical styles
+
+Detailed IA-oriented guidance:
+
+- [tinymce-editor-compatibility.md](./tinymce-editor-compatibility.md)
+
 ---
 
 ## Final Recommendations

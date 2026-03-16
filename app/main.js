@@ -4818,6 +4818,8 @@ ${joinSelectorList([
   ]);
   const contentRule = buildRule(".exe-content", [
     String(q.fontBody) !== String(baseQuick.fontBody) ? `  font-family: ${q.fontBody}${bang};` : "",
+    Number(q.baseFontSize) !== Number(baseQuick.baseFontSize) ? `  font-size: ${q.baseFontSize}px${bang};` : "",
+    Number(q.lineHeight) !== Number(baseQuick.lineHeight) ? `  line-height: ${q.lineHeight}${bang};` : "",
     normalizeHex(q.textColor) !== normalizeHex(baseQuick.textColor) ? `  color: ${normalizeHex(q.textColor)}${bang};` : "",
     normalizeHex(q.contentBgColor) !== normalizeHex(baseQuick.contentBgColor) ? `  background-color: ${normalizeHex(q.contentBgColor)}${bang};` : ""
   ]);

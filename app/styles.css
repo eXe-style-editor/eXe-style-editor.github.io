@@ -276,31 +276,36 @@ body {
 }
 
 #previewInspectBtn[aria-pressed="true"] {
-  background: #e8f7ee;
-  border-color: #33a364;
-  color: #177245;
-  box-shadow: 0 0 0 3px rgb(51 163 100 / 0.18);
+  background: #dbeafe;
+  border-color: #2563eb;
+  color: #1e3a8a;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.22);
 }
 
 #previewInspectBtn[aria-pressed="false"] {
   animation: inspect-soft-pulse 1.9s ease-in-out infinite;
-  border-color: #f0b43c;
-  background: #fff7df;
-  color: #9a5a00;
+  border-color: #1d4ed8;
+  background: #2563eb;
+  color: #eff6ff;
+}
+
+#previewInspectBtn[aria-pressed="false"]:hover {
+  border-color: #1e40af;
+  background: #1d4ed8;
 }
 
 @keyframes inspect-soft-pulse {
   0%,
   100% {
     box-shadow:
-      0 0 0 0 rgb(245 158 11 / 0),
-      0 0 0 0 rgb(251 191 36 / 0);
+      0 0 0 0 rgb(37 99 235 / 0),
+      0 0 0 0 rgb(96 165 250 / 0);
     transform: scale(1);
   }
   50% {
     box-shadow:
-      0 0 0 5px rgb(245 158 11 / 0.34),
-      0 0 18px 2px rgb(251 191 36 / 0.42);
+      0 0 0 5px rgb(37 99 235 / 0.34),
+      0 0 18px 2px rgb(96 165 250 / 0.42);
     transform: scale(1.06);
   }
 }

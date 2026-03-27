@@ -1,8 +1,8 @@
 window.$i18n = window.$i18n || {};
 window.$i18n.es = {
   "app.title": "EdEX",
-  "trial.notice.strong": "Editor de estilos en fase de pruebas.",
-  "trial.notice.text": "Verifica siempre el resultado final antes de publicarlo o compartirlo. Puedes informar sobre problemas o sugerencias en el enlace que tienes en la parte inferior.",
+  "trial.notice.strong": "Puedes editar directamente el estilo con el botón azul,",
+  "trial.notice.text": "utiliza el menú izquierdo para cambios globales o aspectos no accesibles con el ratón. Verifica siempre el resultado final antes de publicarlo o compartirlo. Puedes informar sobre problemas o sugerencias en el enlace que tienes en la parte inferior.",
   "trial.notice.close": "Cerrar aviso",
   "header.title": "EdEX",
   "header.subtitle": "Editor de estilos de eXeLearning",

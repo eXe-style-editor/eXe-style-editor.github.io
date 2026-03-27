@@ -1,8 +1,8 @@
 window.$i18n = window.$i18n || {};
 window.$i18n.en = {
   "app.title": "EdEX",
-  "trial.notice.strong": "Style editor in testing phase.",
-  "trial.notice.text": "Always verify the final result before publishing or sharing. You can report problems or suggestions using the link at the bottom.",
+  "trial.notice.strong": "You can edit the style directly with the blue button,",
+  "trial.notice.text": "use the left menu for global changes or aspects that are not accessible with the mouse. Always verify the final result before publishing or sharing. You can report problems or suggestions using the link at the bottom.",
   "trial.notice.close": "Close notice",
   "header.title": "EdEX",
   "header.subtitle": "eXeLearning style editor",

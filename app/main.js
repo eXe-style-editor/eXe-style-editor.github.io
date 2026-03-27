@@ -501,7 +501,8 @@ const QUICK_PROTECTED_PATTERNS = [
   { re: /#searchBarTogger\b/i, label: "#searchBarTogger" },
   { re: /\.nav-buttons\b/i, label: ".nav-buttons" }
 ];
-const TRIAL_NOTICE_KEY = "editor-estilos:trial-notice-dismissed";
+const NOTICE_VERSION = "2026-03-click-edit-guidance";
+const TRIAL_NOTICE_KEY = `editor-estilos:notice-dismissed:${NOTICE_VERSION}`;
 const PREVIEW_TOGGLES_KEY = "editor-estilos:preview-toggles";
 const PREVIEW_FRAME_URL = "about:blank";
 const DEFAULT_BOOT_ELPX_URL = "assets/ejemplo.elpx";
@@ -1371,21 +1372,20 @@ function setBusyOverlay(active, text = "Cargando…") {
 
 function setupTrialNotice() {
   if (!els.trialNotice || !els.dismissTrialNotice) return;
-  const today = new Date().toISOString().slice(0, 10);
-  let dismissedToday = false;
+  let dismissed = false;
   try {
-    dismissedToday = window.localStorage.getItem(TRIAL_NOTICE_KEY) === today;
+    dismissed = window.localStorage.getItem(TRIAL_NOTICE_KEY) === "1";
   } catch {
-    dismissedToday = false;
+    dismissed = false;
   }
-  if (dismissedToday) {
+  if (dismissed) {
     els.trialNotice.classList.add("hidden");
     return;
   }
   els.dismissTrialNotice.addEventListener("click", () => {
     els.trialNotice.classList.add("hidden");
     try {
-      window.localStorage.setItem(TRIAL_NOTICE_KEY, today);
+      window.localStorage.setItem(TRIAL_NOTICE_KEY, "1");
     } catch {
       // ignore storage errors
     }

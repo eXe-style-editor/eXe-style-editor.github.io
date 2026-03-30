@@ -1005,6 +1005,8 @@ const state = {
   officialStyles: [],
   selectedOfficialStyleId: "",
   officialSourceId: "",
+  themeCssPath: "style.css",
+  themeJsPath: "style.js",
   activePath: "style.css",
   blobUrls: new Map(),
   quick: { ...QUICK_DEFAULTS },
@@ -1049,6 +1051,118 @@ function markDirty() {
 
 function clearDirty() {
   state.isDirty = false;
+}
+
+function normalizeThemeEntryPath(path, fallback) {
+  const clean = normalizePath(String(path || ""));
+  return clean || fallback;
+}
+
+function extractThemeAssetRefsFromHtml(htmlText) {
+  const refs = { css: [], js: [] };
+  const html = String(htmlText || "");
+  html.replace(/<link[^>]+href=["']([^"']+)["'][^>]*>/gi, (_, href) => {
+    const clean = normalizePath(String(href || "").trim());
+    if (clean) refs.css.push(clean);
+    return _;
+  });
+  html.replace(/<script[^>]+src=["']([^"']+)["'][^>]*>/gi, (_, src) => {
+    const clean = normalizePath(String(src || "").trim());
+    if (clean) refs.js.push(clean);
+    return _;
+  });
+  return refs;
+}
+
+function chooseThemeEntryPath(paths, candidates, fallback) {
+  for (const candidate of candidates) {
+    const clean = normalizePath(candidate);
+    if (clean && paths.includes(clean)) return clean;
+  }
+  return fallback;
+}
+
+function detectThemeEntryPaths(pathsIterable, { htmlText = "", themePrefix = "" } = {}) {
+  const paths = Array.from(pathsIterable || [], (value) => normalizePath(String(value || ""))).filter(Boolean);
+  const refs = extractThemeAssetRefsFromHtml(htmlText);
+  const prefix = normalizePath(themePrefix || "");
+  const stripPrefix = (value) => {
+    const clean = normalizePath(value);
+    if (!clean) return "";
+    if (prefix && clean.startsWith(prefix)) return normalizePath(clean.slice(prefix.length));
+    return clean;
+  };
+  const cssRefs = refs.css.map(stripPrefix).filter(Boolean);
+  const jsRefs = refs.js.map(stripPrefix).filter(Boolean);
+  const rootCss = paths.filter((path) => /^[^/]+\.css$/i.test(path));
+  const rootJs = paths.filter((path) => /^[^/]+\.js$/i.test(path));
+
+  const cssPath = chooseThemeEntryPath(
+    paths,
+    [
+      ...cssRefs,
+      "style.css",
+      "content.css",
+      ...rootCss
+    ],
+    "style.css"
+  );
+  const jsPath = chooseThemeEntryPath(
+    paths,
+    [
+      ...jsRefs,
+      "style.js",
+      "default.js",
+      ...rootJs
+    ],
+    "style.js"
+  );
+  return { cssPath, jsPath };
+}
+
+function setThemeEntryPaths({ cssPath = "style.css", jsPath = "style.js" } = {}) {
+  state.themeCssPath = normalizeThemeEntryPath(cssPath, "style.css");
+  state.themeJsPath = normalizeThemeEntryPath(jsPath, "style.js");
+}
+
+function currentThemeCssPath() {
+  const preferred = normalizeThemeEntryPath(state.themeCssPath, "style.css");
+  if (state.files.has(preferred)) return preferred;
+  if (preferred !== "style.css" && state.files.has("style.css")) return "style.css";
+  return preferred;
+}
+
+function currentThemeJsPath() {
+  const preferred = normalizeThemeEntryPath(state.themeJsPath, "style.js");
+  if (state.files.has(preferred)) return preferred;
+  if (preferred !== "style.js" && state.files.has("style.js")) return "style.js";
+  return preferred;
+}
+
+function hasThemeCssFile() {
+  return state.files.has(currentThemeCssPath());
+}
+
+function hasThemeJsFile() {
+  return state.files.has(currentThemeJsPath());
+}
+
+function preferredActiveFilePath() {
+  const cssPath = currentThemeCssPath();
+  if (state.files.has(cssPath)) return cssPath;
+  if (state.files.has("style.css")) return "style.css";
+  return listFilesSorted()[0] || "";
+}
+
+function alignThemeEntriesToTargetNames({ cssPath = "", jsPath = "" } = {}) {
+  const targetCss = normalizePath(String(cssPath || ""));
+  const targetJs = normalizePath(String(jsPath || ""));
+  if (targetCss && targetCss !== "style.css" && state.files.has("style.css") && !state.files.has(targetCss)) {
+    moveThemeFile("style.css", targetCss);
+  }
+  if (targetJs && targetJs !== "style.js" && state.files.has("style.js") && !state.files.has(targetJs)) {
+    moveThemeFile("style.js", targetJs);
+  }
 }
 
 function getUserManualPathForLang(lang = "es") {
@@ -1119,9 +1233,10 @@ async function restoreEditorSnapshot(snapshot) {
   state.baseFiles = new Set(snapshot.baseFiles || []);
   state.selectedOfficialStyleId = snapshot.selectedOfficialStyleId || state.selectedOfficialStyleId;
   state.officialSourceId = snapshot.officialSourceId || "";
+  setThemeEntryPaths(detectThemeEntryPaths(state.files.keys()));
   state.activePath = state.files.has(snapshot.activePath)
     ? snapshot.activePath
-    : (state.files.has("style.css") ? "style.css" : listFilesSorted()[0] || "");
+    : preferredActiveFilePath();
 
   renderOfficialStylesSelect();
   refreshFileTypeFilterOptions();
@@ -1452,10 +1567,11 @@ function ensureCoreFilesPresent({ markAsDirty: shouldMarkDirty = false } = {}) {
     invalidateBlob("config.xml");
     added.push("config.xml");
   }
-  if (!state.files.has("style.js")) {
-    state.files.set("style.js", encode(DEFAULT_STYLE_JS));
-    invalidateBlob("style.js");
-    added.push("style.js");
+  const jsPath = currentThemeJsPath();
+  if (!state.files.has(jsPath)) {
+    state.files.set(jsPath, encode(DEFAULT_STYLE_JS));
+    invalidateBlob(jsPath);
+    added.push(jsPath);
   }
   if (!state.files.has("screenshot.png")) {
     state.files.set("screenshot.png", base64ToBytes(MIN_SCREENSHOT_PNG_BASE64));
@@ -1589,7 +1705,7 @@ function rewriteElpxThemeUrls(cssText) {
 }
 
 function applyLiveElpxCssToFrame() {
-  if (!state.elpxMode || !els.previewFrame?.contentDocument || !state.files.has("style.css")) return;
+  if (!state.elpxMode || !els.previewFrame?.contentDocument || !hasThemeCssFile()) return;
   let doc;
   try {
     doc = els.previewFrame.contentDocument;
@@ -1678,15 +1794,15 @@ function reloadElpxPreviewPage() {
 
 function detectElpxThemePrefix(paths) {
   const cleanPaths = Array.from(paths || []).map((p) => normalizePath(p)).filter(Boolean);
-  const preferred = cleanPaths.find((p) => /(^|\/)theme\/style\.css$/i.test(p));
-  if (preferred) return preferred.slice(0, -("style.css".length));
+  const preferred = cleanPaths.find((p) => /(^|\/)theme\/(?:style|content)\.css$/i.test(p));
+  if (preferred) return preferred.slice(0, -(preferred.split("/").pop().length));
 
-  const cssCandidates = cleanPaths.filter((p) => p.toLowerCase().endsWith("style.css"));
+  const cssCandidates = cleanPaths.filter((p) => /(?:^|\/)(?:style|content)\.css$/i.test(p));
   for (const candidate of cssCandidates) {
-    const prefix = candidate.slice(0, -("style.css".length));
+    const prefix = candidate.slice(0, -(candidate.split("/").pop().length));
     if (cleanPaths.includes(`${prefix}config.xml`)) return prefix;
   }
-  if (cssCandidates.length) return cssCandidates[0].slice(0, -("style.css".length));
+  if (cssCandidates.length) return cssCandidates[0].slice(0, -(cssCandidates[0].split("/").pop().length));
   return "theme/";
 }
 
@@ -1700,6 +1816,7 @@ async function deactivateElpxMode({ resetFrame = true } = {}) {
   state.elpxSessionId = "";
   state.elpxOriginalName = "";
   state.elpxThemePrefix = "theme/";
+  setThemeEntryPaths({ cssPath: "style.css", jsPath: "style.js" });
   state.elpxThemeFiles.clear();
   state.elpxFiles.clear();
   if (state.elpxCacheName) {
@@ -1928,12 +2045,13 @@ function convertLegacyThemePackageIfNeeded() {
     }
   }
 
-  const currentStyleJs = state.files.has("style.js") ? decode(state.files.get("style.js")) : "";
+  const jsPath = currentThemeJsPath();
+  const currentStyleJs = state.files.has(jsPath) ? decode(state.files.get(jsPath)) : "";
   const upgradedStyleJs = upsertLegacyCompatStyleJs(currentStyleJs);
   if (upgradedStyleJs !== currentStyleJs) {
-    state.files.set("style.js", encode(upgradedStyleJs));
-    invalidateBlob("style.js");
-    notes.push("compatibilidad legacy actualizada en style.js (cabecera/navegación/controles)");
+    state.files.set(jsPath, encode(upgradedStyleJs));
+    invalidateBlob(jsPath);
+    notes.push(`compatibilidad legacy actualizada en ${jsPath} (cabecera/navegación/controles)`);
   }
 
   return { converted: notes.length > 0, notes, detectedLegacy: true };
@@ -2596,15 +2714,17 @@ function refreshFileTypeFilterOptions({ forceAll = false } = {}) {
 }
 
 function readCss() {
-  return state.files.has("style.css") ? decode(state.files.get("style.css")) : "";
+  const cssPath = currentThemeCssPath();
+  return state.files.has(cssPath) ? decode(state.files.get(cssPath)) : "";
 }
 
 function writeCss(cssText, { recordUndo = true } = {}) {
+  const cssPath = currentThemeCssPath();
   const currentCss = readCss();
   if (recordUndo && String(cssText || "") !== currentCss) pushUndoSnapshot();
-  state.files.set("style.css", encode(cssText));
-  invalidateBlob("style.css");
-  if (state.activePath === "style.css") syncEditorWithActiveFile();
+  state.files.set(cssPath, encode(cssText));
+  invalidateBlob(cssPath);
+  if (state.activePath === cssPath) syncEditorWithActiveFile();
   renderPreview();
 }
 
@@ -5101,7 +5221,7 @@ function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
     const css = `${baseCss}\n\n/* quick-overrides:start */\n${quickCss}\n/* quick-overrides:end */\n`;
     writeCss(css);
     markDirty();
-    if (showStatus) setStatusT("status.quickApplied", "Ajustes rápidos volcados en style.css");
+    if (showStatus) setStatus(i18nText("status.quickApplied", `Ajustes rápidos volcados en ${currentThemeCssPath()}`));
     return;
   }
   const baseCss = stripQuickBlock(readCss());
@@ -5110,7 +5230,7 @@ function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
   const css = `${cleanedBaseCss}\n\n/* quick-overrides:start */\n${quickCss}\n/* quick-overrides:end */\n`;
   writeCss(css);
   markDirty();
-  if (showStatus) setStatusT("status.quickApplied", "Ajustes rápidos volcados en style.css");
+  if (showStatus) setStatus(i18nText("status.quickApplied", `Ajustes rápidos volcados en ${currentThemeCssPath()}`));
 }
 
 function quickBlockNeedsSchemaMigration(css) {
@@ -5372,9 +5492,10 @@ function renderPreview() {
 }
 
 function styleJsText() {
-  if (!state.files.has("style.js")) return "";
+  const jsPath = currentThemeJsPath();
+  if (!state.files.has(jsPath)) return "";
   try {
-    return decode(state.files.get("style.js"));
+    return decode(state.files.get(jsPath));
   } catch {
     return "";
   }
@@ -5492,6 +5613,9 @@ async function loadOfficialStylesCatalog() {
 
 async function loadOfficialStyle(styleId, { showStatus = true, resetFileFilter = true } = {}) {
   const applyOverLoadedElpx = state.elpxMode;
+  const previousThemeEntries = applyOverLoadedElpx
+    ? { cssPath: currentThemeCssPath(), jsPath: currentThemeJsPath() }
+    : null;
   if (!applyOverLoadedElpx) {
     await deactivateElpxMode({ resetFrame: true });
   }
@@ -5510,11 +5634,14 @@ async function loadOfficialStyle(styleId, { showStatus = true, resetFileFilter =
   );
 
   for (const [filePath, bytes] of fetched) state.files.set(filePath, bytes);
+  if (previousThemeEntries) alignThemeEntriesToTargetNames(previousThemeEntries);
+  setThemeEntryPaths(detectThemeEntryPaths(state.files.keys()));
 
-  if (state.files.has("style.css")) {
+  if (hasThemeCssFile()) {
     const sanitized = sanitizeStyleCss(readCss());
-    state.files.set("style.css", encode(sanitized));
-    invalidateBlob("style.css");
+    const cssPath = currentThemeCssPath();
+    state.files.set(cssPath, encode(sanitized));
+    invalidateBlob(cssPath);
   }
 
   state.templateFiles = new Set(style.files);
@@ -5523,7 +5650,7 @@ async function loadOfficialStyle(styleId, { showStatus = true, resetFileFilter =
   state.officialSourceId = style.id;
   state.previewLayoutMode = "modern";
   state.previewFromLegacyZip = false;
-  state.activePath = state.files.has("style.css") ? "style.css" : listFilesSorted()[0] || "";
+  state.activePath = preferredActiveFilePath();
 
   renderOfficialStylesSelect();
   renderOfficialStylePreview(style.id);
@@ -5555,6 +5682,9 @@ async function loadOfficialStyle(styleId, { showStatus = true, resetFileFilter =
 
 async function loadZip(file) {
   const applyOverLoadedElpx = state.elpxMode;
+  const previousThemeEntries = applyOverLoadedElpx
+    ? { cssPath: currentThemeCssPath(), jsPath: currentThemeJsPath() }
+    : null;
   if (!applyOverLoadedElpx) {
     await deactivateElpxMode({ resetFrame: true });
   }
@@ -5571,8 +5701,10 @@ async function loadZip(file) {
     const bytes = await zip.files[rawName].async("uint8array");
     state.files.set(short, bytes);
   }
+  if (previousThemeEntries) alignThemeEntriesToTargetNames(previousThemeEntries);
 
   const legacyConversion = convertLegacyThemePackageIfNeeded();
+  setThemeEntryPaths(detectThemeEntryPaths(state.files.keys()));
   const autoAddedOnLoad = ensureCoreFilesPresent({ markAsDirty: false });
   state.previewLayoutMode = detectPreviewLayoutMode();
   state.previewFromLegacyZip = Boolean(legacyConversion.detectedLegacy);
@@ -5581,11 +5713,12 @@ async function loadZip(file) {
   if (legacyConversion.converted) {
     zipStatus = `ZIP legado convertido automáticamente: ${legacyConversion.notes.join(" | ")}`;
   }
-  if (state.files.has("style.css")) {
+  if (hasThemeCssFile()) {
     const originalCss = readCss();
     const sanitized = sanitizeStyleCss(originalCss);
-    state.files.set("style.css", encode(sanitized));
-    invalidateBlob("style.css");
+    const cssPath = currentThemeCssPath();
+    state.files.set(cssPath, encode(sanitized));
+    invalidateBlob(cssPath);
     const issues = auditStyleCss(sanitized);
     if (issues.length) {
       zipStatus = `ZIP cargado con advertencias CSS: ${issues.join(" | ")}`;
@@ -5600,7 +5733,7 @@ async function loadZip(file) {
 
   state.templateFiles = new Set(state.files.keys());
   state.officialSourceId = "";
-  state.activePath = state.files.has("style.css") ? "style.css" : listFilesSorted()[0] || "";
+  state.activePath = preferredActiveFilePath();
   hideOfficialStylePreview();
   refreshFileTypeFilterOptions({ forceAll: true });
   renderFileList();
@@ -5680,10 +5813,14 @@ async function loadElpx(file) {
     state.elpxThemeFiles.add(rel);
   }
 
-  if (state.files.has("style.css")) {
+  const indexHtml = packageFiles.has("index.html") ? decode(packageFiles.get("index.html")) : "";
+  setThemeEntryPaths(detectThemeEntryPaths(state.files.keys(), { htmlText: indexHtml, themePrefix }));
+
+  if (hasThemeCssFile()) {
     const sanitized = sanitizeStyleCss(readCss());
-    state.files.set("style.css", encode(sanitized));
-    invalidateBlob("style.css");
+    const cssPath = currentThemeCssPath();
+    state.files.set(cssPath, encode(sanitized));
+    invalidateBlob(cssPath);
   }
   const autoAddedOnLoad = ensureCoreFilesPresent({ markAsDirty: false });
 
@@ -5704,7 +5841,7 @@ async function loadElpx(file) {
   state.templateFiles = new Set(state.files.keys());
   state.baseFiles = new Set(state.files.keys());
   state.officialSourceId = "";
-  state.activePath = state.files.has("style.css") ? "style.css" : listFilesSorted()[0] || "";
+  state.activePath = preferredActiveFilePath();
   state.previewLayoutMode = "modern";
   state.previewFromLegacyZip = false;
   hideOfficialStylePreview();
@@ -5737,7 +5874,8 @@ async function loadElpx(file) {
 
 function validationReport() {
   const current = new Set(state.files.keys());
-  const missingCore = CORE_REQUIRED.filter((f) => !current.has(f));
+  const requiredCore = ["config.xml", currentThemeCssPath(), currentThemeJsPath(), "screenshot.png"];
+  const missingCore = requiredCore.filter((f) => !current.has(f));
   const missingTemplate = Array.from(state.templateFiles).filter((f) => !current.has(f));
   const missingBase = Array.from(state.baseFiles).filter((f) => !current.has(f));
 
@@ -5749,7 +5887,7 @@ function validationReport() {
   if (missingTemplate.length) lines.push(`- ${missingTemplate.join("\n- ")}`);
   lines.push(`Faltan respecto a base: ${missingBase.length}`);
   if (missingBase.length) lines.push(`- ${missingBase.slice(0, 30).join("\n- ")}${missingBase.length > 30 ? "\n- ..." : ""}`);
-  const cssIssues = state.files.has("style.css") ? auditStyleCss(readCss()) : ["No existe style.css"];
+  const cssIssues = hasThemeCssFile() ? auditStyleCss(readCss()) : [`No existe ${currentThemeCssPath()}`];
   lines.push(`Incidencias CSS críticas: ${cssIssues.length}`);
   if (cssIssues.length) lines.push(`- ${cssIssues.join("\n- ")}`);
 
@@ -5758,28 +5896,32 @@ function validationReport() {
 
 function importValidationSummary() {
   const current = new Set(state.files.keys());
-  const missingCore = CORE_REQUIRED.filter((f) => !current.has(f));
-  const cssIssues = state.files.has("style.css") ? auditStyleCss(readCss()) : ["No existe style.css"];
+  const requiredCore = ["config.xml", currentThemeCssPath(), currentThemeJsPath(), "screenshot.png"];
+  const missingCore = requiredCore.filter((f) => !current.has(f));
+  const cssIssues = hasThemeCssFile() ? auditStyleCss(readCss()) : [`No existe ${currentThemeCssPath()}`];
   return { missingCore, cssIssues };
 }
 
 async function exportZip() {
   if (blockExportForOfficialMetadataConflict("exportar")) return;
 
-  if (state.files.has("style.css")) {
+  const cssPath = currentThemeCssPath();
+  const jsPath = currentThemeJsPath();
+
+  if (state.files.has(cssPath)) {
     const sanitized = sanitizeStyleCss(readCss());
     const signed = upsertExportSignature(sanitized);
-    state.files.set("style.css", encode(signed));
-    invalidateBlob("style.css");
+    state.files.set(cssPath, encode(signed));
+    invalidateBlob(cssPath);
   }
-  if (state.files.has("style.js")) {
-    const currentStyleJs = decode(state.files.get("style.js"));
+  if (state.files.has(jsPath)) {
+    const currentStyleJs = decode(state.files.get(jsPath));
     const needsLegacyCompatRefresh = state.previewFromLegacyZip || LEGACY_COMPAT_MARKERS.some((marker) => currentStyleJs.includes(marker));
     if (needsLegacyCompatRefresh) {
       const upgradedStyleJs = upsertLegacyCompatStyleJs(currentStyleJs);
       if (upgradedStyleJs !== currentStyleJs) {
-        state.files.set("style.js", encode(upgradedStyleJs));
-        invalidateBlob("style.js");
+        state.files.set(jsPath, encode(upgradedStyleJs));
+        invalidateBlob(jsPath);
       }
     }
   }
@@ -5789,7 +5931,7 @@ async function exportZip() {
     refreshFileTypeFilterOptions();
     renderFileList();
     if (!state.activePath || !state.files.has(state.activePath)) {
-      state.activePath = state.files.has("style.css") ? "style.css" : listFilesSorted()[0] || "";
+      state.activePath = preferredActiveFilePath();
     }
     syncEditorWithActiveFile();
     renderPreview();
@@ -5805,7 +5947,13 @@ async function exportZip() {
   }
 
   const zip = new window.JSZip();
-  for (const [path, bytes] of state.files.entries()) zip.file(path, bytes);
+  for (const [path, bytes] of state.files.entries()) {
+    if (path === cssPath && cssPath !== "style.css") continue;
+    if (path === jsPath && jsPath !== "style.js") continue;
+    zip.file(path, bytes);
+  }
+  if (state.files.has(cssPath)) zip.file("style.css", state.files.get(cssPath));
+  if (state.files.has(jsPath)) zip.file("style.js", state.files.get(jsPath));
   const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
 
   const name = (els.metaName.value || "style").replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase();
@@ -5836,11 +5984,12 @@ async function exportElpx() {
   }
   const renameCheck = await ensureElpxRenameForOfficialStyle();
   if (!renameCheck.ok) return;
-  if (state.files.has("style.css")) {
+  const cssPath = currentThemeCssPath();
+  if (state.files.has(cssPath)) {
     const sanitized = sanitizeStyleCss(readCss());
     const signed = upsertExportSignature(sanitized);
-    state.files.set("style.css", encode(signed));
-    invalidateBlob("style.css");
+    state.files.set(cssPath, encode(signed));
+    invalidateBlob(cssPath);
   }
   const autoAddedOnExport = ensureCoreFilesPresent({ markAsDirty: false });
   if (autoAddedOnExport.length) {
@@ -5848,7 +5997,7 @@ async function exportElpx() {
     renderFileList();
     refreshMetaFields();
     if (!state.activePath || !state.files.has(state.activePath)) {
-      state.activePath = state.files.has("style.css") ? "style.css" : listFilesSorted()[0] || "";
+      state.activePath = preferredActiveFilePath();
     }
     syncEditorWithActiveFile();
   }
@@ -5896,7 +6045,7 @@ function onEditorInput() {
   scheduleEditorHighlight(path);
   syncDetachedEditorFromMain();
 
-  if (path === "style.css") {
+  if (path === currentThemeCssPath()) {
     state.quick = { ...state.quick, ...quickFromCss(readCss()) };
     quickToUI(state.quick);
     applyEditorTheme();
@@ -6433,7 +6582,7 @@ function buildFontFaceRule(fileName) {
 }
 
 function ensureCustomFontFaces(fileNames) {
-  if (!state.files.has("style.css") || !fileNames.length) return [];
+  if (!hasThemeCssFile() || !fileNames.length) return [];
   const originalCss = readCss();
   const blockMatch = originalCss.match(/\/\* custom-fonts:start \*\/[\s\S]*?\/\* custom-fonts:end \*\//i);
   const currentBlock = blockMatch ? blockMatch[0] : "";

@@ -505,7 +505,7 @@ const NOTICE_VERSION = "2026-03-click-edit-guidance";
 const TRIAL_NOTICE_KEY = `editor-estilos:notice-dismissed:${NOTICE_VERSION}`;
 const PREVIEW_TOGGLES_KEY = "editor-estilos:preview-toggles";
 const PREVIEW_FRAME_URL = "about:blank";
-const DEFAULT_BOOT_ELPX_URL = "assets/ejemplo.elpx";
+const DEFAULT_BOOT_ELPX_URL = "assets/manual_edex.elpx";
 const CLICK_OVERRIDES_START = "/* click-overrides:start */";
 const CLICK_OVERRIDES_END = "/* click-overrides:end */";
 const UNDO_STACK_LIMIT = 30;
@@ -7243,11 +7243,11 @@ async function loadDefaultBootElpx() {
     throw new Error(`No se pudo cargar ${DEFAULT_BOOT_ELPX_URL} (${response.status})`);
   }
   const blob = await response.blob();
-  const file = new File([blob], "ejemplo.elpx", { type: blob.type || "application/zip" });
+  const file = new File([blob], "manual_edex.elpx", { type: blob.type || "application/zip" });
   setBusyOverlay(true, i18nText("preview.loadingExample", "Cargando ejemplo..."));
   try {
     await loadElpx(file);
-    if (els.elpxInputName) els.elpxInputName.textContent = i18nText("file.defaultExampleLoaded", "ejemplo.elpx (cargado por defecto)");
+    if (els.elpxInputName) els.elpxInputName.textContent = i18nText("file.defaultExampleLoaded", "manual_edex.elpx (cargado por defecto)");
     setStatus(i18nText("status.defaultExampleLoaded", "Ejemplo cargado por defecto."));
   } finally {
     setBusyOverlay(false);

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-30T11:03:58.000Z",
+  "generatedAt": "2026-04-08T18:35:38.000Z",
   "styles": [
     {
       "id": "base",
@@ -89,7 +89,7 @@
         "icons/case.svg",
         "icons/chrono.svg",
         "icons/collaborative.svg",
-        "icons/competences.svg",
+        "icons/competencies.svg",
         "icons/diary.svg",
         "icons/diary_alt.svg",
         "icons/discuss.svg",
@@ -280,7 +280,7 @@
         "icons/case.svg",
         "icons/chrono.svg",
         "icons/collaborative.svg",
-        "icons/competences.svg",
+        "icons/competencies.svg",
         "icons/diary.svg",
         "icons/diary_alt.svg",
         "icons/discuss.svg",
@@ -486,7 +486,7 @@
         "icons/case.svg",
         "icons/chrono.svg",
         "icons/collaborative.svg",
-        "icons/competences.svg",
+        "icons/competencies.svg",
         "icons/diary.svg",
         "icons/diary_alt.svg",
         "icons/discuss.svg",

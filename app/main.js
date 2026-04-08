@@ -2028,7 +2028,7 @@ function convertLegacyThemePackageIfNeeded() {
     .filter(Boolean);
   let copiedIcons = 0;
   for (const icon of iconMatches) {
-    const target = `icons/${icon.name}.${icon.ext}`;
+    const target = `icons/${canonicalIconBaseName(icon.name)}.${icon.ext}`;
     if (state.files.has(target)) continue;
     state.files.set(target, cloneBytes(state.files.get(icon.source)));
     invalidateBlob(target);
@@ -5429,13 +5429,38 @@ function rewriteCssUrls(css) {
   });
 }
 
+const ICON_BASE_NAME_ALIASES = {
+  competencies: ["competences"],
+  objectives: ["objetives"]
+};
+
+const ICON_BASE_NAME_CANONICAL = Object.freeze(
+  Object.entries(ICON_BASE_NAME_ALIASES).reduce((map, [canonical, aliases]) => {
+    map[canonical] = canonical;
+    for (const alias of aliases) map[alias] = canonical;
+    return map;
+  }, {})
+);
+
+function canonicalIconBaseName(name) {
+  const clean = String(name || "").trim().toLowerCase();
+  return ICON_BASE_NAME_CANONICAL[clean] || clean;
+}
+
+function iconBaseNameCandidates(name) {
+  const canonical = canonicalIconBaseName(name);
+  return [canonical, ...(ICON_BASE_NAME_ALIASES[canonical] || [])];
+}
+
 function previewIconUrl(name) {
   const candidates = ["svg", "png", "gif", "jpg", "jpeg", "webp"];
-  for (const ext of candidates) {
-    const path = `icons/${name}.${ext}`;
-    if (state.files.has(path)) return getBlobUrl(path);
-    const legacyPath = `icon_${name}.${ext}`;
-    if (state.files.has(legacyPath)) return getBlobUrl(legacyPath);
+  for (const baseName of iconBaseNameCandidates(name)) {
+    for (const ext of candidates) {
+      const path = `icons/${baseName}.${ext}`;
+      if (state.files.has(path)) return getBlobUrl(path);
+      const legacyPath = `icon_${baseName}.${ext}`;
+      if (state.files.has(legacyPath)) return getBlobUrl(legacyPath);
+    }
   }
   return "";
 }
@@ -6458,7 +6483,7 @@ function normalizeIconBaseName(fileName) {
     .replace(/[^a-zA-Z0-9._-]/g, "_")
     .toLowerCase()
     .trim();
-  return base;
+  return canonicalIconBaseName(base);
 }
 
 async function onAddIdeviceIconsSelected(fileList) {
@@ -6479,13 +6504,15 @@ async function onAddIdeviceIconsSelected(fileList) {
     if (!baseName) continue;
     const iconPath = `icons/${baseName}.${extension}`;
 
-    for (const ext of ["svg", "png", "gif", "jpg", "jpeg", "webp"]) {
-      const existingPath = `icons/${baseName}.${ext}`;
-      if (existingPath === iconPath) continue;
-      if (state.files.has(existingPath)) {
-        state.files.delete(existingPath);
-        invalidateBlob(existingPath);
-        replaced += 1;
+    for (const variant of iconBaseNameCandidates(baseName)) {
+      for (const ext of ["svg", "png", "gif", "jpg", "jpeg", "webp"]) {
+        const existingPath = `icons/${variant}.${ext}`;
+        if (existingPath === iconPath) continue;
+        if (state.files.has(existingPath)) {
+          state.files.delete(existingPath);
+          invalidateBlob(existingPath);
+          replaced += 1;
+        }
       }
     }
 

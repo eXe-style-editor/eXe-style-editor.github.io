@@ -238,7 +238,7 @@ window.$i18n.es = {
   "alert.downloadableZero": "Has marcado el estilo como no descargable (downloadable=0).\n\nEn eXe no podrá importarse desde la interfaz mientras mantengas ese valor.",
   "status.downloadableZero": "downloadable=0: el estilo no será importable desde la interfaz de eXe.",
   "status.downloadableOne": "downloadable=1: el estilo será importable desde la interfaz de eXe.",
-  "status.defaultElpxLoadError": "No se pudo cargar ejemplo.elpx por defecto: {error}",
+  "status.defaultElpxLoadError": "No se pudo cargar manual_edex.elpx por defecto: {error}",
   "preview.loadingExample": "Cargando ejemplo...",
   "preview.quickActions": "Acciones rápidas",
   "clickEdit.textColor": "Color de texto",

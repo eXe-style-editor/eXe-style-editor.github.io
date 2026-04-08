@@ -7269,7 +7269,7 @@ async function loadDefaultBootElpx() {
     await loadOfficialStylesCatalog();
     await loadDefaultBootElpx();
   } catch (err) {
-    setStatus(i18nText("status.defaultElpxLoadError", `No se pudo cargar ejemplo.elpx por defecto: ${err.message}`, { error: err.message }));
+    setStatus(i18nText("status.defaultElpxLoadError", `No se pudo cargar manual_edex.elpx por defecto: ${err.message}`, { error: err.message }));
     setBusyOverlay(false);
   }
 })();

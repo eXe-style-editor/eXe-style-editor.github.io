@@ -3937,6 +3937,7 @@ function applySelectedExportTypeToFrame() {
 }
 
 function applyPreviewSettingsFromUI() {
+  const prev = state.selectedExportType;
   const next = previewSettingsFromUI();
   state.selectedExportType = next.selectedExportType;
   state.selectedScopes = next.selectedScopes;
@@ -3947,7 +3948,7 @@ function applyPreviewSettingsFromUI() {
   applySelectedExportTypeToFrame();
   state.previewLastElpxCss = "";
   renderPreview();
-  if (state.elpxMode) scheduleRuntimeExport();
+  if (state.elpxMode && next.selectedExportType !== prev) scheduleRuntimeExport();
 }
 
 function applyPreviewTogglesFromUI() {

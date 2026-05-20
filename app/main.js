@@ -1082,6 +1082,10 @@ const state = {
   isDirty: false
 };
 let highlightRenderRaf = 0;
+let exeRuntime = null;
+let exeRuntimeElpxLoaded = false;
+let exeRuntimeExportTimer = 0;
+let exeRuntimeLastFormat = "";
 const detachedEditor = {
   win: null,
   path: ""
@@ -1746,6 +1750,7 @@ function rewriteElpxThemeUrls(cssText) {
   });
 }
 
+
 function applyLiveElpxCssToFrame() {
   if (!state.elpxMode || !els.previewFrame?.contentDocument || !hasThemeCssFile()) return;
   let doc;
@@ -1828,6 +1833,103 @@ function scheduleElpxThemeSync() {
   }, 220);
 }
 
+async function initExeRuntime() {
+  if (exeRuntime) return exeRuntime;
+  const mod = await import("./exe-runtime/exe-runtime.js");
+  exeRuntime = mod.createExeRuntime();
+  return exeRuntime;
+}
+
+function scheduleRuntimeExport() {
+  if (!state.elpxMode) return;
+  if (exeRuntimeExportTimer) clearTimeout(exeRuntimeExportTimer);
+  exeRuntimeExportTimer = setTimeout(() => {
+    exeRuntimeExportTimer = 0;
+    renderRuntimeExport().catch((err) => {
+      console.warn("[EdEX] renderRuntimeExport error:", err);
+    });
+  }, 400);
+}
+
+function currentThemeFilesForRuntime() {
+  const files = new Map();
+  for (const [path, bytes] of state.files.entries()) {
+    files.set(path, cloneBytes(bytes));
+  }
+  return files;
+}
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 0);
+}
+
+async function ensureExeRuntimeLoadedFromCurrentElpx() {
+  const rt = await initExeRuntime();
+  if (exeRuntimeElpxLoaded) return rt;
+  const zip = new window.JSZip();
+  for (const [path, bytes] of state.elpxFiles.entries()) zip.file(path, bytes);
+  const bytes = new Uint8Array(await zip.generateAsync({ type: "arraybuffer", compression: "DEFLATE" }));
+  await rt.loadElpx(bytes, { filename: state.elpxOriginalName || "project.elpx" });
+  exeRuntimeElpxLoaded = true;
+  exeRuntimeLastFormat = "";
+  return rt;
+}
+
+async function renderRuntimeExport() {
+  if (!state.elpxMode) return;
+  const sessionId = state.elpxSessionId;
+  const format = state.selectedExportType;
+  if (format === exeRuntimeLastFormat) return;
+
+  if (format === "html5") {
+    // Restore original ELPX files (may have been overwritten by a previous sp/scorm export)
+    if ("caches" in window) {
+      const cache = await window.caches.open(state.elpxCacheName);
+      for (const [path, bytes] of state.elpxFiles.entries()) {
+        await writeElpxFileToCache(cache, sessionId, path, bytes);
+      }
+      await syncThemeFilesToElpxCache();
+    }
+    exeRuntimeLastFormat = "html5";
+    const startPath = state.elpxFiles.has("index.html")
+      ? "index.html"
+      : Array.from(state.elpxFiles.keys()).find((p) => p.endsWith(".html")) || "index.html";
+    state.previewLastElpxCss = "";
+    els.previewFrame?.setAttribute("src", `${elpxUrlPath(sessionId, startPath)}?rev=${Date.now()}`);
+    return;
+  }
+
+  if (!exeRuntimeElpxLoaded || !exeRuntime) {
+    console.warn("[EdEX] runtime not ready for format:", format);
+    return;
+  }
+  console.info("[EdEX] exporting format:", format);
+  const result = await exeRuntime.exportPreview({
+    format,
+    themeFiles: currentThemeFilesForRuntime()
+  });
+  if (!state.elpxMode || state.elpxSessionId !== sessionId) return;
+  if (!result?.files?.size) throw new Error(`Export for ${format} produced no files`);
+  console.info("[EdEX] export done, files:", Array.from(result.files.keys()));
+  const cache = await window.caches.open(state.elpxCacheName);
+  for (const [path, bytes] of result.files.entries()) {
+    await writeElpxFileToCache(cache, sessionId, path, bytes);
+  }
+  exeRuntimeLastFormat = format;
+  const entryPoint = result.entryPath || "index.html";
+  console.info("[EdEX] loading entry:", entryPoint);
+  state.previewLastElpxCss = "";
+  els.previewFrame?.setAttribute("src", `${elpxUrlPath(sessionId, entryPoint)}?rev=${Date.now()}`);
+}
+
 function reloadElpxPreviewPage() {
   if (!state.elpxMode || !state.elpxSessionId || !els.previewFrame) return;
   const pagePath = currentElpxPagePath() || "index.html";
@@ -1854,6 +1956,12 @@ async function deactivateElpxMode({ resetFrame = true } = {}) {
     clearTimeout(state.elpxThemeSyncTimer);
     state.elpxThemeSyncTimer = 0;
   }
+  if (exeRuntimeExportTimer) {
+    clearTimeout(exeRuntimeExportTimer);
+    exeRuntimeExportTimer = 0;
+  }
+  exeRuntimeElpxLoaded = false;
+  exeRuntimeLastFormat = "";
   state.elpxMode = false;
   state.previewLastElpxCss = "";
   state.elpxSessionId = "";
@@ -3628,25 +3736,27 @@ function updatePreviewScopeStatus() {
   if (!els.previewScopeStatus) return;
   const scopes = normalizePreviewScopes(state.selectedScopes);
   const exportType = EXPORT_TYPES[normalizeExportType(state.selectedExportType)];
+  const allExportSelected = scopes.length >= EXPORT_SCOPE_DEFAULTS.length && EXPORT_SCOPE_DEFAULTS.every((s) => scopes.includes(s));
+
+  let msg = "";
   if (!scopes.length) {
-    els.previewScopeStatus.textContent = i18nText("preview.scope.none", "Sin scope seleccionado: el CSS temporal se aplica sin envolver.");
-  } else if (scopes.length === EXPORT_SCOPE_DEFAULTS.length && !scopes.includes(TINYMCE_SCOPE)) {
-    els.previewScopeStatus.textContent = i18nText("preview.scope.all", "Scope: todos los formatos.");
-  } else if (scopes.length === PREVIEW_SCOPE_OPTIONS.length) {
-    els.previewScopeStatus.textContent = i18nText("preview.scope.allWithTinymce", "Scope: todos los formatos y editor TinyMCE.");
+    msg = i18nText("preview.scope.none", "Sin scope: el CSS temporal se aplica sin envolver.");
   } else if (!isActivePreviewInSelectedScope()) {
-    els.previewScopeStatus.textContent = i18nText(
+    msg = i18nText(
       "preview.scope.outsideActive",
-      "La vista activa ({label}) está fuera del scope seleccionado; la edición rápida queda bloqueada.",
+      "Vista activa ({label}) fuera del scope; la edición rápida queda bloqueada.",
       { label: exportType.label }
     );
-  } else {
-    els.previewScopeStatus.textContent = i18nText(
+  } else if (!allExportSelected) {
+    msg = i18nText(
       "preview.scope.active",
-      "Scope temporal activo para {count} formato(s).",
-      { count: scopes.length }
+      "Scope activo: {count} formato(s).",
+      { count: scopes.filter((s) => EXPORT_SCOPE_DEFAULTS.includes(s)).length }
     );
   }
+
+  els.previewScopeStatus.textContent = msg;
+  els.previewScopeStatus.hidden = !msg;
 }
 
 function splitCssSelectorList(selectorText) {
@@ -3810,6 +3920,7 @@ function applyPreviewSettingsFromUI() {
   applySelectedExportTypeToFrame();
   state.previewLastElpxCss = "";
   renderPreview();
+  if (state.elpxMode) scheduleRuntimeExport();
 }
 
 function applyPreviewTogglesFromUI() {
@@ -6308,6 +6419,19 @@ async function loadElpx(file) {
   clearDirty();
   clearUndoHistory();
 
+  // Load into runtime in background so it's ready when the user switches format (non-blocking)
+  const _elpxFileRef = file;
+  const _elpxSessionRef = state.elpxSessionId;
+  initExeRuntime()
+    .then((rt) => rt.loadElpx(_elpxFileRef, { filename: state.elpxOriginalName }))
+    .then(() => {
+      if (!state.elpxMode || state.elpxSessionId !== _elpxSessionRef) return;
+      exeRuntimeElpxLoaded = true;
+      exeRuntimeLastFormat = "html5"; // ELPX already in cache as html5 — no need to re-export
+      console.info("[EdEX] runtime ready for format switching");
+    })
+    .catch((err) => { console.warn("[EdEX] runtime load failed:", err); });
+
   const autoAddedMsg = autoAddedOnLoad.length
     ? i18nText("status.elpxThemeFilesAdded", ` Se añadieron ficheros de tema faltantes: ${autoAddedOnLoad.join(", ")}.`, { files: autoAddedOnLoad.join(", ") })
     : "";
@@ -6405,15 +6529,7 @@ async function exportZip() {
   const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
 
   const name = (els.metaName.value || "style").replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase();
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${name}.zip`;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    URL.revokeObjectURL(a.href);
-    a.remove();
-  }, 0);
+  downloadBlob(blob, `${name}.zip`);
 
   clearDirty();
   const warnings = [];
@@ -6459,20 +6575,32 @@ async function exportElpx() {
   }
   await syncElpxProjectThemeNameReference();
   await syncThemeFilesToElpxCache({ replaceTheme: true });
+  const original = String(state.elpxOriginalName || "project.elpx").replace(/\.elpx$/i, "");
+  const safe = safeFileName(original) || "project";
+  const downloadName = `${safe}-mod.elpx`;
+  try {
+    const rt = await ensureExeRuntimeLoadedFromCurrentElpx();
+    const result = await rt.exportPackage({
+      format: "elpx",
+      filename: downloadName,
+      themeFiles: currentThemeFilesForRuntime(),
+      metadata: {
+        theme: getCurrentThemeNameFromConfigXml() || "base"
+      }
+    });
+    const blob = new Blob([result.data], { type: "application/zip" });
+    downloadBlob(blob, downloadName);
+    clearDirty();
+    setStatus(i18nText("status.elpxExportedRuntime", `ELPX exportado con runtime eXeLearning: ${downloadName}`, { filename: downloadName }));
+    return;
+  } catch (err) {
+    console.warn("[EdEX] runtime ELPX export failed, falling back to package rewrite:", err);
+  }
+
   const zip = new window.JSZip();
   for (const [path, bytes] of state.elpxFiles.entries()) zip.file(path, bytes);
   const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
-  const original = String(state.elpxOriginalName || "project.elpx").replace(/\.elpx$/i, "");
-  const safe = safeFileName(original) || "project";
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${safe}-mod.elpx`;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    URL.revokeObjectURL(a.href);
-    a.remove();
-  }, 0);
+  downloadBlob(blob, downloadName);
   clearDirty();
   const autoAddedWarning = autoAddedOnExport.length
     ? i18nText("status.withWarning", ` con aviso: se crearon obligatorios: ${autoAddedOnExport.join(", ")}`, { details: autoAddedOnExport.join(", ") })

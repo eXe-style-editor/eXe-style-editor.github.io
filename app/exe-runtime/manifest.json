@@ -3,7 +3,7 @@
   "sourceBranch": "feature/developer-menu",
   "sourceCommit": "c4286e70b12c1731a77b97a8927a8d005fc5c510",
   "sourceVersion": "0.0.0-alpha",
-  "syncedAt": "2026-05-20T11:21:42Z",
+  "syncedAt": "2026-05-20T11:42:29Z",
   "files": [
     { "path": "bundles/exporters.bundle.js", "size": 446438, "sha256": "8330aa0a24e06cf335e5eb31731f9f66fc8b10bbe798d01b66b86c30969bafb0" },
     { "path": "bundles/importers.bundle.js", "size": 411548, "sha256": "2464b48de0920b7de28ff7c8b3c5d9c3cd03a79a4d7119d532d992913070cd34" },
@@ -18,6 +18,8 @@
     { "path": "resources/bundles/themes/nova.zip", "size": 140987, "sha256": "eb57d6d66f67d138876fd2649eb54536c936fba3c63e9ea9db74dc6265a2df54" },
     { "path": "resources/bundles/themes/universal.zip", "size": 348410, "sha256": "575658bfeeb4c26f37b2b62847b63162b216a827ac244b68163b2f4f9d7902a8" },
     { "path": "resources/bundles/themes/zen.zip", "size": 1173555, "sha256": "460b9eb104b8dfb93b143544a68e8b070a6f5e31de4a14e979efd396173bddaf" },
+    { "path": "resources/common/scorm/SCOFunctions.js", "size": 8631, "sha256": "e76ea8bcc3a4fd4d039a80074db5fb5144b947f2a63b70a414308c0fcba95241" },
+    { "path": "resources/common/scorm/SCORM_API_wrapper.js", "size": 55402, "sha256": "0352434badc9e7c2efa1f1fa080259c19d3784833ac6de16eecbe24fe881b538" },
     { "path": "resources/themes/base/base/config.xml", "size": 490, "sha256": "408a7387b84c7f94275a9fd5455a309bd2722a4db04dda5bd65ffb211e3c9dd7" },
     { "path": "resources/themes/base/base/icons/activity.png", "size": 1880, "sha256": "270fa5c945f2de6b02b72e834b9f662b1b3af27d41de453f5d44385b22bda6a7" },
     { "path": "resources/themes/base/base/icons/agreement.png", "size": 2064, "sha256": "8996c9ca037eb1ba3672237f89172d8e8cf10c4947df097df7680dde7f62bfb9" },
@@ -482,6 +484,7 @@
     { "path": "resources/themes/base/zen/img/teacher_hat.svg", "size": 778, "sha256": "66788fbb3a57a12f5be7cf2f0efc93387dc15c80822970e9fe0ce08e94d02764" },
     { "path": "resources/themes/base/zen/screenshot.png", "size": 28990, "sha256": "a8472967bb73db8b78f26c1112ae0a021742e50f9656ae136de40e85cabefc43" },
     { "path": "resources/themes/base/zen/style.css", "size": 28495, "sha256": "d533f15806d443870a2443be9f31b925b6b4711238c1d8005a08a314a079e79c" },
-    { "path": "resources/themes/base/zen/style.js", "size": 5431, "sha256": "81181711d122ce11fca36f6b4da12d7a490c5db7f0cea4991b13895107d6ab34" }
+    { "path": "resources/themes/base/zen/style.js", "size": 5431, "sha256": "81181711d122ce11fca36f6b4da12d7a490c5db7f0cea4991b13895107d6ab34" },
+    { "path": "vendor/yjs/yjs.min.js", "size": 87126, "sha256": "27e271cd7b80fa8c4fc34104163d81be9af4e5f9d6923d52e3f64021ed3c75d8" }
   ]
 }

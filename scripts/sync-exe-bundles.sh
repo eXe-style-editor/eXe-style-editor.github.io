@@ -81,12 +81,19 @@ RUNTIME_DIR="$REPO_ROOT/app/exe-runtime"
 BUNDLES_DIR="$RUNTIME_DIR/bundles"
 RESOURCES_DIR="$RUNTIME_DIR/resources"
 THEMES_DIR="$RESOURCES_DIR/themes/base"
+VENDOR_DIR="$RUNTIME_DIR/vendor"
 
-rm -rf "$BUNDLES_DIR" "$RESOURCES_DIR"
-mkdir -p "$BUNDLES_DIR" "$RESOURCES_DIR" "$THEMES_DIR"
+rm -rf "$BUNDLES_DIR" "$RESOURCES_DIR" "$VENDOR_DIR"
+mkdir -p "$BUNDLES_DIR" "$RESOURCES_DIR" "$THEMES_DIR" "$VENDOR_DIR/yjs"
 
 cp "$SOURCE_REPO/public/app/yjs/importers.bundle.js" "$BUNDLES_DIR/importers.bundle.js"
 cp "$SOURCE_REPO/public/app/yjs/exporters.bundle.js" "$BUNDLES_DIR/exporters.bundle.js"
+
+if [[ -f "$SOURCE_REPO/public/libs/yjs/yjs.min.js" ]]; then
+  cp "$SOURCE_REPO/public/libs/yjs/yjs.min.js" "$VENDOR_DIR/yjs/yjs.min.js"
+else
+  echo "Warning: yjs.min.js not found; ELPX import will not work in the browser." >&2
+fi
 
 if [[ -d "$SOURCE_REPO/public/bundles" ]]; then
   mkdir -p "$RESOURCES_DIR/bundles"
@@ -99,6 +106,14 @@ if [[ -d "$SOURCE_REPO/public/files/perm/themes/base" ]]; then
   cp -R "$SOURCE_REPO/public/files/perm/themes/base/." "$THEMES_DIR/"
 else
   echo "Warning: base themes directory not found; base themes were not copied." >&2
+fi
+
+if [[ -d "$SOURCE_REPO/public/app/common/scorm" ]]; then
+  mkdir -p "$RESOURCES_DIR/common/scorm"
+  cp "$SOURCE_REPO/public/app/common/scorm/SCOFunctions.js" "$RESOURCES_DIR/common/scorm/SCOFunctions.js"
+  cp "$SOURCE_REPO/public/app/common/scorm/SCORM_API_wrapper.js" "$RESOURCES_DIR/common/scorm/SCORM_API_wrapper.js"
+else
+  echo "Warning: SCORM support files not found; SCORM export may be incomplete." >&2
 fi
 
 SOURCE_COMMIT="$(git -C "$SOURCE_REPO" rev-parse HEAD)"
@@ -116,7 +131,7 @@ SYNCED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   printf '  "files": [\n'
   (
     cd "$RUNTIME_DIR"
-    find bundles resources -type f | sort | while IFS= read -r file; do
+    find bundles resources vendor -type f | sort | while IFS= read -r file; do
       size="$(wc -c < "$file")"
       hash="$(sha256sum "$file" | awk '{print $1}')"
       printf '%s\t%s\t%s\n' "$file" "$size" "$hash"

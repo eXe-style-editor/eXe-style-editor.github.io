@@ -45,6 +45,44 @@ Esta carpeta aun no sustituye la previsualizacion actual. Es una base estable
 para crear despues el adaptador local que cargue ELPX, resuelva recursos y
 exporte Website, Single Page y SCORM con los exportadores oficiales.
 
+El primer adaptador esta en:
+
+```text
+app/exe-runtime/exe-runtime.js
+```
+
+API inicial:
+
+```js
+import { createExeRuntime } from "./app/exe-runtime/exe-runtime.js";
+
+const runtime = createExeRuntime();
+await runtime.init();
+await runtime.loadElpx(file);
+const metadata = runtime.getMetadata();
+const pages = runtime.getPages();
+const preview = await runtime.exportPreview({ format: "html5" });
+```
+
+Estado actual:
+
+- carga `yjs.min.js`, `importers.bundle.js` y `exporters.bundle.js`;
+- crea un `Y.Doc` local sin IndexedDB ni WebSocket;
+- importa ELPX con `SharedImporters.createBrowserImporter`;
+- guarda assets importados en memoria;
+- resuelve tema, CSS base, librerias base, librerias comunes bajo demanda,
+  SCORM e iDevices desde `app/exe-runtime/resources/`;
+- exporta ELPX desde el documento importado usando el tema editado de EdEX;
+- expone diagnostico con `runtime.diagnostics()`.
+
+Notas de rendimiento:
+
+- `common.zip` e `idevices.zip` no se materializan completos para cada preview.
+  El adaptador abre el ZIP y extrae solo la carpeta de la libreria o iDevice
+  solicitado.
+- A largo plazo sigue siendo mejor partirlos en bundles pequenos por
+  libreria/iDevice o generar un indice ligero con acceso por entrada.
+
 ## Globals expuestos por los bundles
 
 `importers.bundle.js` expone en navegador:

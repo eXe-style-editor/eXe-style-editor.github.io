@@ -590,24 +590,25 @@
 
     <main id="previewPanel" class="preview-panel">
       <header class="preview-header">
-        <div class="preview-header-top">
-          <h2 data-i18n="preview.title">Previsualización real del ELPX</h2>
-          <div class="preview-toolbar" aria-label="Acciones rápidas" data-i18n-aria-label="preview.quickActions">
-            <button id="undoBtn" class="icon-btn" type="button" title="Deshacer último cambio" data-i18n-title="preview.undoTitle" disabled>
-              <span class="material-symbols-outlined" aria-hidden="true">undo</span>
-              <span class="sr-only" data-i18n="preview.undoTitle">Deshacer último cambio</span>
-            </button>
-            <button id="redoBtn" class="icon-btn" type="button" title="Rehacer cambio deshecho" data-i18n-title="preview.redoTitle" disabled>
-              <span class="material-symbols-outlined" aria-hidden="true">redo</span>
-              <span class="sr-only" data-i18n="preview.redoTitle">Rehacer último cambio</span>
-            </button>
-            <button id="previewInspectBtn" class="icon-btn" type="button" aria-pressed="false" title="Modo edición por clic" data-i18n-title="preview.inspectTitle">
-              <span class="material-symbols-outlined" aria-hidden="true">ads_click</span>
-              <span class="sr-only" data-i18n="preview.inspectActivate">Activar modo edición por clic</span>
-            </button>
-          </div>
-        </div>
         <div class="preview-mode-bar" aria-label="Tipo de previsualización y scope CSS">
+          <fieldset class="preview-device-group" aria-label="Tamaño de previsualización">
+            <legend data-i18n="preview.device">Vista</legend>
+            <label>
+              <input type="radio" name="previewDevice" value="desktop" data-preview-device checked />
+              <span class="material-symbols-outlined" aria-hidden="true">desktop_windows</span>
+              <span data-i18n="preview.device.desktop">Desktop</span>
+            </label>
+            <label>
+              <input type="radio" name="previewDevice" value="tablet" data-preview-device />
+              <span class="material-symbols-outlined" aria-hidden="true">tablet_mac</span>
+              <span data-i18n="preview.device.tablet">Tablet</span>
+            </label>
+            <label>
+              <input type="radio" name="previewDevice" value="mobile" data-preview-device />
+              <span class="material-symbols-outlined" aria-hidden="true">smartphone</span>
+              <span data-i18n="preview.device.mobile">Móvil</span>
+            </label>
+          </fieldset>
           <fieldset class="preview-segmented" aria-label="Tipo de exportación">
             <legend data-i18n="preview.exportType">Formato</legend>
             <label>
@@ -642,25 +643,21 @@
               <span data-i18n="preview.scope.tinymce">TinyMCE</span>
             </label>
           </fieldset>
-          <fieldset class="preview-device-group" aria-label="Tamaño de previsualización">
-            <legend data-i18n="preview.device">Vista</legend>
-            <label>
-              <input type="radio" name="previewDevice" value="desktop" data-preview-device checked />
-              <span class="material-symbols-outlined" aria-hidden="true">desktop_windows</span>
-              <span data-i18n="preview.device.desktop">Desktop</span>
-            </label>
-            <label>
-              <input type="radio" name="previewDevice" value="tablet" data-preview-device />
-              <span class="material-symbols-outlined" aria-hidden="true">tablet_mac</span>
-              <span data-i18n="preview.device.tablet">Tablet</span>
-            </label>
-            <label>
-              <input type="radio" name="previewDevice" value="mobile" data-preview-device />
-              <span class="material-symbols-outlined" aria-hidden="true">smartphone</span>
-              <span data-i18n="preview.device.mobile">Móvil</span>
-            </label>
-          </fieldset>
-          <p id="previewScopeStatus" class="status-inline" aria-live="polite"></p>
+          <p id="previewScopeStatus" class="status-inline" aria-live="polite" hidden></p>
+          <div class="preview-toolbar" aria-label="Acciones rápidas" data-i18n-aria-label="preview.quickActions">
+            <button id="undoBtn" class="icon-btn" type="button" title="Deshacer último cambio" data-i18n-title="preview.undoTitle" disabled>
+              <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+              <span class="sr-only" data-i18n="preview.undoTitle">Deshacer último cambio</span>
+            </button>
+            <button id="redoBtn" class="icon-btn" type="button" title="Rehacer cambio deshecho" data-i18n-title="preview.redoTitle" disabled>
+              <span class="material-symbols-outlined" aria-hidden="true">redo</span>
+              <span class="sr-only" data-i18n="preview.redoTitle">Rehacer último cambio</span>
+            </button>
+            <button id="previewInspectBtn" class="icon-btn" type="button" aria-pressed="false" title="Modo edición por clic" data-i18n-title="preview.inspectTitle">
+              <span class="material-symbols-outlined" aria-hidden="true">ads_click</span>
+              <span class="sr-only" data-i18n="preview.inspectActivate">Activar modo edición por clic</span>
+            </button>
+          </div>
         </div>
       </header>
       <div id="previewViewport" class="preview-viewport" data-device="desktop">

@@ -249,7 +249,10 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 12px;
-  margin-top: 8px;
+}
+
+.preview-mode-bar .preview-toolbar {
+  margin-left: auto;
 }
 
 .preview-segmented,

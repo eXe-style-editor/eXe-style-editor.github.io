@@ -1843,10 +1843,17 @@ async function initExeRuntime() {
 function scheduleRuntimeExport() {
   if (!state.elpxMode) return;
   if (exeRuntimeExportTimer) clearTimeout(exeRuntimeExportTimer);
+  const format = state.selectedExportType;
+  if (format !== "html5") {
+    setBusyOverlay(true, i18nText("preview.exporting", "Generando previsualización…"));
+  } else {
+    setBusyOverlay(false);
+  }
   exeRuntimeExportTimer = setTimeout(() => {
     exeRuntimeExportTimer = 0;
     renderRuntimeExport().catch((err) => {
       console.warn("[EdEX] renderRuntimeExport error:", err);
+      setBusyOverlay(false);
     });
   }, 400);
 }
@@ -1909,25 +1916,30 @@ async function renderRuntimeExport() {
 
   if (!exeRuntimeElpxLoaded || !exeRuntime) {
     console.warn("[EdEX] runtime not ready for format:", format);
+    setBusyOverlay(false);
     return;
   }
-  console.info("[EdEX] exporting format:", format);
-  const result = await exeRuntime.exportPreview({
-    format,
-    themeFiles: currentThemeFilesForRuntime()
-  });
-  if (!state.elpxMode || state.elpxSessionId !== sessionId) return;
-  if (!result?.files?.size) throw new Error(`Export for ${format} produced no files`);
-  console.info("[EdEX] export done, files:", Array.from(result.files.keys()));
-  const cache = await window.caches.open(state.elpxCacheName);
-  for (const [path, bytes] of result.files.entries()) {
-    await writeElpxFileToCache(cache, sessionId, path, bytes);
+  try {
+    console.info("[EdEX] exporting format:", format);
+    const result = await exeRuntime.exportPreview({
+      format,
+      themeFiles: currentThemeFilesForRuntime()
+    });
+    if (!state.elpxMode || state.elpxSessionId !== sessionId) return;
+    if (!result?.files?.size) throw new Error(`Export for ${format} produced no files`);
+    console.info("[EdEX] export done, files:", Array.from(result.files.keys()));
+    const cache = await window.caches.open(state.elpxCacheName);
+    for (const [path, bytes] of result.files.entries()) {
+      await writeElpxFileToCache(cache, sessionId, path, bytes);
+    }
+    exeRuntimeLastFormat = format;
+    const entryPoint = result.entryPath || "index.html";
+    console.info("[EdEX] loading entry:", entryPoint);
+    state.previewLastElpxCss = "";
+    els.previewFrame?.setAttribute("src", `${elpxUrlPath(sessionId, entryPoint)}?rev=${Date.now()}`);
+  } finally {
+    setBusyOverlay(false);
   }
-  exeRuntimeLastFormat = format;
-  const entryPoint = result.entryPath || "index.html";
-  console.info("[EdEX] loading entry:", entryPoint);
-  state.previewLastElpxCss = "";
-  els.previewFrame?.setAttribute("src", `${elpxUrlPath(sessionId, entryPoint)}?rev=${Date.now()}`);
 }
 
 function reloadElpxPreviewPage() {

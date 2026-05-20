@@ -152,6 +152,7 @@ window.$i18n.es = {
   "preview.inspectActivate": "Activar modo edición por clic",
   "preview.iframeTitle": "Previsualización eXe",
   "preview.loading": "Cargando...",
+  "preview.exporting": "Generando previsualización…",
   "preview.exportType": "Formato",
   "preview.exportType.website": "Website",
   "preview.exportType.single": "Single Page",

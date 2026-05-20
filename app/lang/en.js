@@ -152,6 +152,7 @@ window.$i18n.en = {
   "preview.inspectActivate": "Activate click edit mode",
   "preview.iframeTitle": "eXe preview",
   "preview.loading": "Loading...",
+  "preview.exporting": "Generating preview…",
   "preview.exportType": "Format",
   "preview.exportType.website": "Website",
   "preview.exportType.single": "Single Page",

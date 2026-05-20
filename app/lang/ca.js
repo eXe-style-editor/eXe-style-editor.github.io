@@ -152,6 +152,7 @@ window.$i18n.ca = {
   "preview.inspectActivate": "Activar mode d'edició per clic",
   "preview.iframeTitle": "Previsualització eXe",
   "preview.loading": "Carregant...",
+  "preview.exporting": "Generant previsualització…",
   "preview.exportType": "Format",
   "preview.exportType.website": "Website",
   "preview.exportType.single": "Single Page",

@@ -3162,11 +3162,18 @@ function tinymceSelectorForContentSelector(selector) {
   return tinymceSelectors.join(",\n");
 }
 
-function upsertClickOverrideRule(css, selector, declarations, { includeTinymce = false } = {}) {
+function upsertClickOverrideRule(css, selector, declarations, { includeTinymce = false, exportScopes = [] } = {}) {
   const cleanSelector = String(selector || "").trim();
   if (!cleanSelector || !declarations || typeof declarations !== "object") return css;
-  const tinymceSelector = includeTinymce ? tinymceSelectorForContentSelector(cleanSelector) : null;
-  const effectiveSelector = tinymceSelector ? `${cleanSelector},\n${tinymceSelector}` : cleanSelector;
+  const shouldWrapExport = exportScopes.length > 0 && exportScopes.length < EXPORT_SCOPE_DEFAULTS.length;
+  const parts = shouldWrapExport
+    ? exportScopes.map((scope) => prefixSelectorWithBodyClass(cleanSelector, scope))
+    : [cleanSelector];
+  if (includeTinymce) {
+    const tinymceSelector = tinymceSelectorForContentSelector(cleanSelector);
+    if (tinymceSelector) parts.push(tinymceSelector);
+  }
+  const effectiveSelector = parts.join(",\n");
   let block = getClickOverridesBlock(css).trim();
   const selectorRe = new RegExp(`${escapeRegExp(cleanSelector)}\\s*\\{[\\s\\S]*?\\}`, "i");
   const effectiveSelectorRe = new RegExp(`${escapeRegExp(effectiveSelector)}\\s*\\{[\\s\\S]*?\\}`, "i");
@@ -3909,6 +3916,12 @@ function buildScopeWrapped(cssText, selectedBodyClasses) {
   const onlyAllExportScopes = exportScopes.length === EXPORT_SCOPE_DEFAULTS.length && !scopes.includes(TINYMCE_SCOPE);
   if (!scopes.length || onlyAllExportScopes) return String(cssText || "");
   return wrapCssRulesWithScopes(cssText, scopes);
+}
+
+function buildExportScopeWrapped(cssText, selectedScopes) {
+  const exportScopes = normalizePreviewScopes(selectedScopes).filter((s) => EXPORT_SCOPE_DEFAULTS.includes(s));
+  if (!exportScopes.length || exportScopes.length === EXPORT_SCOPE_DEFAULTS.length) return String(cssText || "");
+  return wrapCssRulesWithScopes(cssText, exportScopes);
 }
 
 function previewCssText(cssText) {
@@ -4723,7 +4736,8 @@ function applyClickEditChanges() {
   const declarations = currentClickEditDeclarations();
   const css = readCss();
   const nextCss = upsertClickOverrideRule(css, selector, declarations, {
-    includeTinymce: state.selectedScopes.includes(TINYMCE_SCOPE)
+    includeTinymce: state.selectedScopes.includes(TINYMCE_SCOPE),
+    exportScopes: state.selectedScopes.filter((s) => EXPORT_SCOPE_DEFAULTS.includes(s))
   });
   state.clickEditIgnoreUntil = Date.now() + 350;
   if (nextCss === css) {
@@ -5749,7 +5763,7 @@ function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
       enabled: Boolean(state.quick.compactNoHeaderIdevices),
       important: false
     });
-    const quickCss = [quickWithoutCompact, compactChunk].filter(Boolean).join("\n\n").trim();
+    const quickCss = buildExportScopeWrapped([quickWithoutCompact, compactChunk].filter(Boolean).join("\n\n").trim(), state.selectedScopes);
     const css = `${baseCss}\n\n/* quick-overrides:start */\n${quickCss}\n/* quick-overrides:end */\n`;
     writeCss(css);
     markDirty();
@@ -5757,7 +5771,7 @@ function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
     return;
   }
   const baseCss = stripQuickBlock(readCss());
-  const quickCss = buildQuickCss({ important: false, base: quickFromCss(baseCss) });
+  const quickCss = buildExportScopeWrapped(buildQuickCss({ important: false, base: quickFromCss(baseCss) }), state.selectedScopes);
   const cleanedBaseCss = pruneClickOverridesConflicts(baseCss, quickCss);
   const css = `${cleanedBaseCss}\n\n/* quick-overrides:start */\n${quickCss}\n/* quick-overrides:end */\n`;
   writeCss(css);

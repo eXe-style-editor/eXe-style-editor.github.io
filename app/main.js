@@ -3162,10 +3162,10 @@ function tinymceSelectorForContentSelector(selector) {
   return tinymceSelectors.join(",\n");
 }
 
-function upsertClickOverrideRule(css, selector, declarations) {
+function upsertClickOverrideRule(css, selector, declarations, { includeTinymce = false } = {}) {
   const cleanSelector = String(selector || "").trim();
   if (!cleanSelector || !declarations || typeof declarations !== "object") return css;
-  const tinymceSelector = tinymceSelectorForContentSelector(cleanSelector);
+  const tinymceSelector = includeTinymce ? tinymceSelectorForContentSelector(cleanSelector) : null;
   const effectiveSelector = tinymceSelector ? `${cleanSelector},\n${tinymceSelector}` : cleanSelector;
   let block = getClickOverridesBlock(css).trim();
   const selectorRe = new RegExp(`${escapeRegExp(cleanSelector)}\\s*\\{[\\s\\S]*?\\}`, "i");
@@ -3185,7 +3185,9 @@ function upsertClickOverrideRule(css, selector, declarations) {
     lines.push(`  ${prop}: ${value} !important;`);
   }
   if (!lines.length) return css;
-  block = block.replace(effectiveSelectorRe, "").replace(selectorRe, "").trim();
+  // Remove any existing rule for this selector, with or without an appended tinymce selector
+  const anyVariantRe = new RegExp(`${escapeRegExp(cleanSelector)}[^{}]*\\{[^{}]*\\}`, "i");
+  block = block.replace(effectiveSelectorRe, "").replace(anyVariantRe, "").replace(selectorRe, "").trim();
   const rule = `${effectiveSelector} {\n${lines.join("\n")}\n}`;
   block = block ? `${block}\n\n${rule}` : rule;
   return writeClickOverridesBlock(css, block);
@@ -4720,7 +4722,9 @@ function applyClickEditChanges() {
   const withInteractiveStates = selector.includes(":hover");
   const declarations = currentClickEditDeclarations();
   const css = readCss();
-  const nextCss = upsertClickOverrideRule(css, selector, declarations);
+  const nextCss = upsertClickOverrideRule(css, selector, declarations, {
+    includeTinymce: state.selectedScopes.includes(TINYMCE_SCOPE)
+  });
   state.clickEditIgnoreUntil = Date.now() + 350;
   if (nextCss === css) {
     closeClickEditModal();

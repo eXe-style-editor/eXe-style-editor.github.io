@@ -607,8 +607,65 @@
             </button>
           </div>
         </div>
+        <div class="preview-mode-bar" aria-label="Tipo de previsualización y scope CSS">
+          <fieldset class="preview-segmented" aria-label="Tipo de exportación">
+            <legend data-i18n="preview.exportType">Formato</legend>
+            <label>
+              <input type="radio" name="previewExportType" value="html5" data-export-type checked />
+              <span data-i18n="preview.exportType.website">Website</span>
+            </label>
+            <label>
+              <input type="radio" name="previewExportType" value="html5-sp" data-export-type />
+              <span data-i18n="preview.exportType.single">Single Page</span>
+            </label>
+            <label>
+              <input type="radio" name="previewExportType" value="scorm12" data-export-type />
+              <span data-i18n="preview.exportType.scorm">SCORM</span>
+            </label>
+          </fieldset>
+          <fieldset class="preview-scope-group" aria-label="Scope CSS temporal">
+            <legend data-i18n="preview.scope">Scope CSS</legend>
+            <label>
+              <input type="checkbox" value="exe-web-site" data-preview-scope checked />
+              <span data-i18n="preview.exportType.website">Website</span>
+            </label>
+            <label>
+              <input type="checkbox" value="exe-single-page" data-preview-scope checked />
+              <span data-i18n="preview.exportType.single">Single Page</span>
+            </label>
+            <label>
+              <input type="checkbox" value="exe-scorm" data-preview-scope checked />
+              <span data-i18n="preview.exportType.scorm">SCORM</span>
+            </label>
+            <label>
+              <input type="checkbox" value="tinymce" data-preview-scope />
+              <span data-i18n="preview.scope.tinymce">TinyMCE</span>
+            </label>
+          </fieldset>
+          <fieldset class="preview-device-group" aria-label="Tamaño de previsualización">
+            <legend data-i18n="preview.device">Vista</legend>
+            <label>
+              <input type="radio" name="previewDevice" value="desktop" data-preview-device checked />
+              <span class="material-symbols-outlined" aria-hidden="true">desktop_windows</span>
+              <span data-i18n="preview.device.desktop">Desktop</span>
+            </label>
+            <label>
+              <input type="radio" name="previewDevice" value="tablet" data-preview-device />
+              <span class="material-symbols-outlined" aria-hidden="true">tablet_mac</span>
+              <span data-i18n="preview.device.tablet">Tablet</span>
+            </label>
+            <label>
+              <input type="radio" name="previewDevice" value="mobile" data-preview-device />
+              <span class="material-symbols-outlined" aria-hidden="true">smartphone</span>
+              <span data-i18n="preview.device.mobile">Móvil</span>
+            </label>
+          </fieldset>
+          <p id="previewScopeStatus" class="status-inline" aria-live="polite"></p>
+        </div>
       </header>
-      <iframe id="previewFrame" title="Previsualización eXe" data-i18n-title="preview.iframeTitle" src="about:blank" sandbox="allow-same-origin allow-scripts"></iframe>
+      <div id="previewViewport" class="preview-viewport" data-device="desktop">
+        <iframe id="previewFrame" title="Previsualización eXe" data-i18n-title="preview.iframeTitle" src="about:blank" sandbox="allow-same-origin allow-scripts"></iframe>
+      </div>
       <div id="busyOverlay" class="busy-overlay" hidden>
         <div class="busy-card" role="status" aria-live="polite" aria-busy="true">
           <span class="busy-spinner" aria-hidden="true"></span>

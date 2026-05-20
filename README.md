@@ -57,6 +57,7 @@ Incluye:
 - Si `downloadable=0`, el estilo se puede editar aquí, pero no será importable desde la interfaz de eXe.
 - Los enlaces dentro de la previsualización están desactivados para evitar navegación accidental.
 - En temas con varios `.css` o varios `.js` en raíz, el editor los conserva, pero los ajustes rápidos escriben sobre `style.css`.
+- La preparación del runtime real de eXeLearning está documentada en [reference/development/exelearning-runtime.md](./reference/development/exelearning-runtime.md).
 
 ## Modo seguro (automático)
 

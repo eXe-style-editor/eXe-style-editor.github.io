@@ -7,6 +7,11 @@ const PREVIEW_DEFAULTS = {
   showPageTitle: true,
   collapseIdevices: false
 };
+const EXPORT_TYPES = {
+  html5: "exe-web-site",
+  "html5-sp": "exe-single-page",
+  scorm12: "exe-scorm"
+};
 
 const PREVIEW_PAGE_ID = "20260101000000SIMULADO";
 let modernPageIndex = 0;
@@ -64,6 +69,7 @@ function previewPayload(rawPayload) {
     styleJsText: String(payload.styleJsText || ""),
     layoutMode: String(payload.layoutMode || "modern"),
     legacyImport: Boolean(payload.legacyImport),
+    exportType: Object.prototype.hasOwnProperty.call(EXPORT_TYPES, payload.exportType) ? payload.exportType : "html5",
     preview: { ...PREVIEW_DEFAULTS, ...(payload.preview || {}) },
     iconUrls: payload.iconUrls && typeof payload.iconUrls === "object" ? payload.iconUrls : {},
     screenshotUrl: String(payload.screenshotUrl || ""),
@@ -452,7 +458,7 @@ function applyModernInteractivity(payload) {
 function previewMarkupModern(payload) {
   const p = payload.preview;
   const pages = buildModernPages(payload);
-  const bodyClasses = ["exe-export", "exe-web-site", "js", "preview-sim"];
+  const bodyClasses = ["exe-export", EXPORT_TYPES[payload.exportType] || "exe-web-site", "js", "preview-sim"];
   if (p.navCollapsed) bodyClasses.push("siteNav-off");
   if (p.showSearch) bodyClasses.push("exe-search-on");
   if (p.collapseIdevices) bodyClasses.push("preview-boxes-collapsed");
@@ -562,7 +568,7 @@ function legacyPaginationMarkup(preview) {
 
 function previewMarkupLegacy(payload) {
   const p = payload.preview;
-  const bodyClasses = ["exe-export", "exe-web-site", "js", "preview-sim", "legacy-preview"];
+  const bodyClasses = ["exe-export", EXPORT_TYPES[payload.exportType] || "exe-web-site", "js", "preview-sim", "legacy-preview"];
   if (p.navCollapsed) bodyClasses.push("no-nav");
   if (p.collapseIdevices) bodyClasses.push("preview-boxes-collapsed");
 

@@ -504,7 +504,8 @@ const QUICK_PROTECTED_PATTERNS = [
 const NOTICE_VERSION = "2026-03-click-edit-guidance";
 const TRIAL_NOTICE_KEY = `editor-estilos:notice-dismissed:${NOTICE_VERSION}`;
 const PREVIEW_TOGGLES_KEY = "editor-estilos:preview-toggles";
-const PREVIEW_FRAME_URL = "about:blank";
+const PREVIEW_SETTINGS_KEY = "editor-estilos:preview-settings";
+const PREVIEW_FRAME_URL = "app/preview.html";
 const DEFAULT_BOOT_ELPX_URL = "assets/manual_edex.elpx";
 const CLICK_OVERRIDES_START = "/* click-overrides:start */";
 const CLICK_OVERRIDES_END = "/* click-overrides:end */";
@@ -765,6 +766,30 @@ const PREVIEW_DEFAULTS = {
   showPageTitle: true,
   collapseIdevices: false
 };
+const EXPORT_TYPES = {
+  html5: {
+    label: "Website",
+    bodyClass: "exe-web-site"
+  },
+  "html5-sp": {
+    label: "Single Page",
+    bodyClass: "exe-single-page"
+  },
+  scorm12: {
+    label: "SCORM",
+    bodyClass: "exe-scorm"
+  }
+};
+const EXPORT_SCOPE_DEFAULTS = Object.values(EXPORT_TYPES).map((item) => item.bodyClass);
+const TINYMCE_SCOPE = "tinymce";
+const PREVIEW_SCOPE_DEFAULTS = [...EXPORT_SCOPE_DEFAULTS];
+const PREVIEW_SCOPE_OPTIONS = [...EXPORT_SCOPE_DEFAULTS, TINYMCE_SCOPE];
+const PREVIEW_DEVICE_DEFAULT = "desktop";
+const PREVIEW_DEVICES = {
+  desktop: { label: "Desktop" },
+  tablet: { label: "Tablet" },
+  mobile: { label: "Móvil" }
+};
 const HIGHLIGHT_BY_FILE_GROUP = {
   css: "css",
   js: "javascript",
@@ -866,6 +891,15 @@ function applyControlTooltips() {
   for (const input of els.previewInputs) {
     applyTooltipToControl(input);
   }
+  for (const input of els.previewExportTypeInputs) {
+    applyTooltipToControl(input);
+  }
+  for (const input of els.previewScopeInputs) {
+    applyTooltipToControl(input);
+  }
+  for (const input of els.previewDeviceInputs) {
+    applyTooltipToControl(input);
+  }
   for (const id of CONTROL_HELP_IDS) {
     const target = document.getElementById(id);
     applyTooltipToControl(target);
@@ -876,6 +910,7 @@ const els = {
   appShell: document.getElementById("appShell"),
   editorPanel: document.getElementById("editorPanel"),
   previewPanel: document.getElementById("previewPanel"),
+  previewViewport: document.getElementById("previewViewport"),
   helpLink: document.getElementById("helpLink"),
   busyOverlay: document.getElementById("busyOverlay"),
   busyOverlayText: document.getElementById("busyOverlayText"),
@@ -995,7 +1030,11 @@ const els = {
   faviconPreviewWrap: document.getElementById("faviconPreviewWrap"),
   faviconPreviewImage: document.getElementById("faviconPreviewImage"),
   quickInputs: Array.from(document.querySelectorAll("[data-quick]")),
-  previewInputs: Array.from(document.querySelectorAll("[data-preview]"))
+  previewInputs: Array.from(document.querySelectorAll("[data-preview]")),
+  previewExportTypeInputs: Array.from(document.querySelectorAll("[data-export-type]")),
+  previewScopeInputs: Array.from(document.querySelectorAll("[data-preview-scope]")),
+  previewDeviceInputs: Array.from(document.querySelectorAll("[data-preview-device]")),
+  previewScopeStatus: document.getElementById("previewScopeStatus")
 };
 
 const state = {
@@ -1011,6 +1050,9 @@ const state = {
   blobUrls: new Map(),
   quick: { ...QUICK_DEFAULTS },
   preview: { ...PREVIEW_DEFAULTS },
+  selectedExportType: "html5",
+  selectedScopes: [...PREVIEW_SCOPE_DEFAULTS],
+  selectedDevice: PREVIEW_DEVICE_DEFAULT,
   previewLayoutMode: "modern",
   previewFromLegacyZip: false,
   previewPendingRender: false,
@@ -1713,7 +1755,8 @@ function applyLiveElpxCssToFrame() {
     return;
   }
   if (!doc?.head) return;
-  const cssText = rewriteElpxThemeUrls(readCss());
+  applySelectedExportTypeToFrame();
+  const cssText = previewCssText(rewriteElpxThemeUrls(readCss()));
   if (cssText === state.previewLastElpxCss) return;
   let styleNode = doc.getElementById("editor-elpx-live-css");
   if (!styleNode || String(styleNode.tagName || "").toLowerCase() !== "style") {
@@ -1824,7 +1867,7 @@ async function deactivateElpxMode({ resetFrame = true } = {}) {
   }
   state.elpxCacheName = "";
   if (resetFrame && els.previewFrame) {
-    els.previewFrame.setAttribute("src", "about:blank");
+    els.previewFrame.setAttribute("src", PREVIEW_FRAME_URL);
   }
   if (els.elpxInput) els.elpxInput.value = "";
   if (els.elpxInputName) els.elpxInputName.textContent = i18nText("file.none", "Ningún archivo seleccionado");
@@ -2980,12 +3023,34 @@ function parseClickOverrideDeclarationsObject(declarationsText) {
   return parsed;
 }
 
+function tinymceSelectorForContentSelector(selector) {
+  const selectors = splitCssSelectorList(String(selector || ""));
+  const tinymceSelectors = [];
+  for (const selectorPart of selectors) {
+    const raw = selectorPart.trim();
+    if (!raw) continue;
+    let converted = "";
+    if (/^\.exe-content$/i.test(raw)) {
+      converted = "body#tinymce";
+    } else if (/^\.exe-content(?:\s|>|\+|~)/i.test(raw)) {
+      converted = raw.replace(/^\.exe-content/i, "body#tinymce");
+    } else if (/^body#tinymce\b/i.test(raw)) {
+      converted = raw;
+    }
+    if (converted && !tinymceSelectors.includes(converted)) tinymceSelectors.push(converted);
+  }
+  return tinymceSelectors.join(",\n");
+}
+
 function upsertClickOverrideRule(css, selector, declarations) {
   const cleanSelector = String(selector || "").trim();
   if (!cleanSelector || !declarations || typeof declarations !== "object") return css;
+  const tinymceSelector = tinymceSelectorForContentSelector(cleanSelector);
+  const effectiveSelector = tinymceSelector ? `${cleanSelector},\n${tinymceSelector}` : cleanSelector;
   let block = getClickOverridesBlock(css).trim();
   const selectorRe = new RegExp(`${escapeRegExp(cleanSelector)}\\s*\\{[\\s\\S]*?\\}`, "i");
-  const existingMatch = block.match(selectorRe);
+  const effectiveSelectorRe = new RegExp(`${escapeRegExp(effectiveSelector)}\\s*\\{[\\s\\S]*?\\}`, "i");
+  const existingMatch = block.match(effectiveSelectorRe) || block.match(selectorRe);
   const existingDeclarations = existingMatch
     ? parseClickOverrideDeclarationsObject(existingMatch[0].replace(/^[^{]*\{|\}$/g, ""))
     : {};
@@ -3000,8 +3065,8 @@ function upsertClickOverrideRule(css, selector, declarations) {
     lines.push(`  ${prop}: ${value} !important;`);
   }
   if (!lines.length) return css;
-  block = block.replace(selectorRe, "").trim();
-  const rule = `${cleanSelector} {\n${lines.join("\n")}\n}`;
+  block = block.replace(effectiveSelectorRe, "").replace(selectorRe, "").trim();
+  const rule = `${effectiveSelector} {\n${lines.join("\n")}\n}`;
   block = block ? `${block}\n\n${rule}` : rule;
   return writeClickOverridesBlock(css, block);
 }
@@ -3473,6 +3538,280 @@ function savePreviewToggles(values) {
   }
 }
 
+function normalizeExportType(value) {
+  const key = String(value || "").trim();
+  return Object.prototype.hasOwnProperty.call(EXPORT_TYPES, key) ? key : "html5";
+}
+
+function selectedExportBodyClass() {
+  return EXPORT_TYPES[normalizeExportType(state.selectedExportType)].bodyClass;
+}
+
+function normalizePreviewDevice(value) {
+  const key = String(value || "").trim();
+  return Object.prototype.hasOwnProperty.call(PREVIEW_DEVICES, key) ? key : PREVIEW_DEVICE_DEFAULT;
+}
+
+function normalizePreviewScopes(values) {
+  const known = new Set(PREVIEW_SCOPE_OPTIONS);
+  const next = Array.isArray(values)
+    ? values.map((value) => String(value || "").trim()).filter((value) => known.has(value))
+    : [];
+  return Array.from(new Set(next));
+}
+
+function loadPreviewSettings() {
+  try {
+    const raw = window.localStorage.getItem(PREVIEW_SETTINGS_KEY);
+    if (!raw) return { selectedExportType: "html5", selectedScopes: [...PREVIEW_SCOPE_DEFAULTS], selectedDevice: PREVIEW_DEVICE_DEFAULT };
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return { selectedExportType: "html5", selectedScopes: [...PREVIEW_SCOPE_DEFAULTS], selectedDevice: PREVIEW_DEVICE_DEFAULT };
+    const scopes = normalizePreviewScopes(parsed.selectedScopes);
+    return {
+      selectedExportType: normalizeExportType(parsed.selectedExportType),
+      selectedScopes: scopes.length ? scopes : [...PREVIEW_SCOPE_DEFAULTS],
+      selectedDevice: normalizePreviewDevice(parsed.selectedDevice)
+    };
+  } catch {
+    return { selectedExportType: "html5", selectedScopes: [...PREVIEW_SCOPE_DEFAULTS], selectedDevice: PREVIEW_DEVICE_DEFAULT };
+  }
+}
+
+function savePreviewSettings() {
+  try {
+    window.localStorage.setItem(PREVIEW_SETTINGS_KEY, JSON.stringify({
+      selectedExportType: normalizeExportType(state.selectedExportType),
+      selectedScopes: normalizePreviewScopes(state.selectedScopes),
+      selectedDevice: normalizePreviewDevice(state.selectedDevice)
+    }));
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function previewSettingsFromUI() {
+  const checkedType = els.previewExportTypeInputs.find((input) => input.checked)?.value || "html5";
+  const checkedDevice = els.previewDeviceInputs.find((input) => input.checked)?.value || PREVIEW_DEVICE_DEFAULT;
+  return {
+    selectedExportType: normalizeExportType(checkedType),
+    selectedScopes: normalizePreviewScopes(els.previewScopeInputs.filter((input) => input.checked).map((input) => input.value)),
+    selectedDevice: normalizePreviewDevice(checkedDevice)
+  };
+}
+
+function previewSettingsToUI() {
+  const exportType = normalizeExportType(state.selectedExportType);
+  const scopes = new Set(normalizePreviewScopes(state.selectedScopes));
+  const device = normalizePreviewDevice(state.selectedDevice);
+  for (const input of els.previewExportTypeInputs) {
+    input.checked = normalizeExportType(input.value) === exportType;
+  }
+  for (const input of els.previewScopeInputs) {
+    input.checked = scopes.has(String(input.value || ""));
+  }
+  for (const input of els.previewDeviceInputs) {
+    input.checked = normalizePreviewDevice(input.value) === device;
+  }
+  if (els.previewViewport) els.previewViewport.dataset.device = device;
+  updatePreviewScopeStatus();
+}
+
+function isActivePreviewInSelectedScope() {
+  const scopes = normalizePreviewScopes(state.selectedScopes);
+  const exportScopes = scopes.filter((scope) => EXPORT_SCOPE_DEFAULTS.includes(scope));
+  if (!exportScopes.length && !scopes.includes(TINYMCE_SCOPE)) return true;
+  if (exportScopes.length === EXPORT_SCOPE_DEFAULTS.length) return true;
+  return scopes.includes(selectedExportBodyClass());
+}
+
+function updatePreviewScopeStatus() {
+  if (!els.previewScopeStatus) return;
+  const scopes = normalizePreviewScopes(state.selectedScopes);
+  const exportType = EXPORT_TYPES[normalizeExportType(state.selectedExportType)];
+  if (!scopes.length) {
+    els.previewScopeStatus.textContent = i18nText("preview.scope.none", "Sin scope seleccionado: el CSS temporal se aplica sin envolver.");
+  } else if (scopes.length === EXPORT_SCOPE_DEFAULTS.length && !scopes.includes(TINYMCE_SCOPE)) {
+    els.previewScopeStatus.textContent = i18nText("preview.scope.all", "Scope: todos los formatos.");
+  } else if (scopes.length === PREVIEW_SCOPE_OPTIONS.length) {
+    els.previewScopeStatus.textContent = i18nText("preview.scope.allWithTinymce", "Scope: todos los formatos y editor TinyMCE.");
+  } else if (!isActivePreviewInSelectedScope()) {
+    els.previewScopeStatus.textContent = i18nText(
+      "preview.scope.outsideActive",
+      "La vista activa ({label}) está fuera del scope seleccionado; la edición rápida queda bloqueada.",
+      { label: exportType.label }
+    );
+  } else {
+    els.previewScopeStatus.textContent = i18nText(
+      "preview.scope.active",
+      "Scope temporal activo para {count} formato(s).",
+      { count: scopes.length }
+    );
+  }
+}
+
+function splitCssSelectorList(selectorText) {
+  const selectors = [];
+  let current = "";
+  let paren = 0;
+  let bracket = 0;
+  let quote = "";
+  for (let i = 0; i < selectorText.length; i += 1) {
+    const ch = selectorText[i];
+    const prev = selectorText[i - 1] || "";
+    if (quote) {
+      current += ch;
+      if (ch === quote && prev !== "\\") quote = "";
+      continue;
+    }
+    if (ch === "\"" || ch === "'") {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === "(") paren += 1;
+    else if (ch === ")") paren = Math.max(0, paren - 1);
+    else if (ch === "[") bracket += 1;
+    else if (ch === "]") bracket = Math.max(0, bracket - 1);
+    if (ch === "," && paren === 0 && bracket === 0) {
+      selectors.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) selectors.push(current.trim());
+  return selectors;
+}
+
+function prefixSelectorWithBodyClass(selector, bodyClass) {
+  const clean = String(selector || "").trim();
+  if (!clean) return "";
+  if (bodyClass === TINYMCE_SCOPE) {
+    if (/\bbody#tinymce\b/i.test(clean)) return clean;
+    if (/^body\b/i.test(clean)) return clean.replace(/^body\b/i, "body#tinymce");
+    if (/^html\s+body\b/i.test(clean)) return clean.replace(/^html\s+body\b/i, "html body#tinymce");
+    if (/^:root\b/i.test(clean)) return clean.replace(/^:root\b/i, "body#tinymce");
+    return `body#tinymce ${clean.replace(/(^|[\s>+~])\.exe-content(?=$|[\s>+~.#:[,])/g, "$1").trim()}`;
+  }
+  if (new RegExp(`\\b${escapeRegExp(bodyClass)}\\b`).test(clean)) return clean;
+  const bodyPrefix = `body.${bodyClass}`;
+  if (/^body\b/i.test(clean)) return clean.replace(/^body\b/i, bodyPrefix);
+  if (/^html\s+body\b/i.test(clean)) return clean.replace(/^html\s+body\b/i, `html ${bodyPrefix}`);
+  if (/^:root\b/i.test(clean)) return clean.replace(/^:root\b/i, bodyPrefix);
+  return `${bodyPrefix} ${clean}`;
+}
+
+function findMatchingCssBrace(cssText, openIndex) {
+  let depth = 0;
+  let quote = "";
+  let comment = false;
+  for (let i = openIndex; i < cssText.length; i += 1) {
+    const ch = cssText[i];
+    const next = cssText[i + 1] || "";
+    const prev = cssText[i - 1] || "";
+    if (comment) {
+      if (ch === "*" && next === "/") {
+        comment = false;
+        i += 1;
+      }
+      continue;
+    }
+    if (quote) {
+      if (ch === quote && prev !== "\\") quote = "";
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      comment = true;
+      i += 1;
+      continue;
+    }
+    if (ch === "\"" || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+function wrapCssRulesWithScopes(cssText, scopes) {
+  const css = String(cssText || "");
+  let out = "";
+  let cursor = 0;
+  while (cursor < css.length) {
+    const open = css.indexOf("{", cursor);
+    if (open < 0) {
+      out += css.slice(cursor);
+      break;
+    }
+    const close = findMatchingCssBrace(css, open);
+    if (close < 0) {
+      out += css.slice(cursor);
+      break;
+    }
+    const preludeRaw = css.slice(cursor, open);
+    const commentPrefix = preludeRaw.match(/^\s*(?:\/\*[\s\S]*?\*\/\s*)*/)?.[0] || "";
+    const prelude = preludeRaw.slice(commentPrefix.length).trim();
+    const body = css.slice(open + 1, close);
+    const leading = commentPrefix || (preludeRaw.match(/^\s*/)?.[0] || "");
+    if (!prelude || prelude.startsWith("/*")) {
+      out += css.slice(cursor, close + 1);
+    } else if (prelude.startsWith("@")) {
+      if (/^@(media|supports|container|document|layer)\b/i.test(prelude)) {
+        out += `${leading}${prelude} {\n${wrapCssRulesWithScopes(body, scopes)}\n}`;
+      } else {
+        out += css.slice(cursor, close + 1);
+      }
+    } else {
+      const selectors = splitCssSelectorList(prelude);
+      const scopedSelectors = [];
+      for (const scope of scopes) {
+        for (const selector of selectors) scopedSelectors.push(prefixSelectorWithBodyClass(selector, scope));
+      }
+      out += `${leading}${scopedSelectors.join(",\n")} {${body}}`;
+    }
+    cursor = close + 1;
+  }
+  return out;
+}
+
+function buildScopeWrapped(cssText, selectedBodyClasses) {
+  const scopes = normalizePreviewScopes(selectedBodyClasses);
+  const exportScopes = scopes.filter((scope) => EXPORT_SCOPE_DEFAULTS.includes(scope));
+  const onlyAllExportScopes = exportScopes.length === EXPORT_SCOPE_DEFAULTS.length && !scopes.includes(TINYMCE_SCOPE);
+  if (!scopes.length || onlyAllExportScopes) return String(cssText || "");
+  return wrapCssRulesWithScopes(cssText, scopes);
+}
+
+function previewCssText(cssText) {
+  return buildScopeWrapped(cssText, state.selectedScopes);
+}
+
+function applySelectedExportTypeToFrame() {
+  const bodyClass = selectedExportBodyClass();
+  const doc = els.previewFrame?.contentDocument || null;
+  if (!doc?.body) return;
+  for (const className of PREVIEW_SCOPE_DEFAULTS) doc.body.classList.remove(className);
+  doc.body.classList.add(bodyClass);
+}
+
+function applyPreviewSettingsFromUI() {
+  const next = previewSettingsFromUI();
+  state.selectedExportType = next.selectedExportType;
+  state.selectedScopes = next.selectedScopes;
+  state.selectedDevice = next.selectedDevice;
+  savePreviewSettings();
+  previewSettingsToUI();
+  if (!isActivePreviewInSelectedScope()) setClickEditMode(false);
+  applySelectedExportTypeToFrame();
+  state.previewLastElpxCss = "";
+  renderPreview();
+}
+
 function applyPreviewTogglesFromUI() {
   state.preview = previewFromUI();
   savePreviewToggles(state.preview);
@@ -3811,6 +4150,10 @@ function syncQuickControlsFromClickEdit(baseSelector, declarations, options = {}
 
 function renderLiveClickEditPreview() {
   if (!state.elpxMode || !els.clickEditModal || els.clickEditModal.hidden) return;
+  if (!isActivePreviewInSelectedScope()) {
+    removeLiveClickEditPreviewStyle();
+    return;
+  }
   const selector = expandedClickEditSelector();
   const previewBlocks = [];
   const showCompactNoHeaderPreview = Boolean(
@@ -3865,7 +4208,7 @@ function renderLiveClickEditPreview() {
     node.id = "editor-click-live-edit-style";
     doc.head.appendChild(node);
   }
-  node.textContent = `${previewBlocks.join("\n\n")}\n`;
+  node.textContent = `${previewCssText(previewBlocks.join("\n\n"))}\n`;
 }
 
 function openClickEditModal() {
@@ -4205,6 +4548,14 @@ function bindClickEditFrameHandlers() {
 }
 
 function setClickEditMode(nextMode) {
+  if (nextMode && !isActivePreviewInSelectedScope()) {
+    state.clickEditMode = false;
+    setClickEditButtonState();
+    closeClickEditModal();
+    updatePreviewScopeStatus();
+    setStatusT("status.clickEditScopeBlocked", "Edición por clic bloqueada: la vista activa está fuera del scope CSS seleccionado.");
+    return;
+  }
   state.clickEditMode = Boolean(nextMode);
   setClickEditButtonState();
   if (!state.clickEditMode) {
@@ -4222,6 +4573,11 @@ function toggleClickEditMode() {
 }
 
 function applyClickEditChanges() {
+  if (!isActivePreviewInSelectedScope()) {
+    setStatusT("status.clickEditScopeBlocked", "Edición por clic bloqueada: la vista activa está fuera del scope CSS seleccionado.");
+    closeClickEditModal();
+    return;
+  }
   const baseSelector = String(state.clickEditTargetSelector || "").trim();
   if (!baseSelector) {
     setStatusT("status.noElementSelected", "No hay elemento seleccionado para aplicar cambios.");
@@ -4930,6 +5286,41 @@ ${joinSelectorList([
     if (!lines.length) return "";
     return `${selector} {\n${lines.join("\n")}\n}\n`;
   };
+  const tinymceBodyRule = buildRule("body#tinymce", [
+    String(q.fontBody) !== String(baseQuick.fontBody) ? `  font-family: ${q.fontBody}${bang};` : "",
+    Number(q.baseFontSize) !== Number(baseQuick.baseFontSize) ? `  font-size: ${q.baseFontSize}px${bang};` : "",
+    Number(q.lineHeight) !== Number(baseQuick.lineHeight) ? `  line-height: ${q.lineHeight}${bang};` : "",
+    normalizeHex(q.textColor) !== normalizeHex(baseQuick.textColor) ? `  color: ${normalizeHex(q.textColor)}${bang};` : "",
+    normalizeHex(q.contentBgColor) !== normalizeHex(baseQuick.contentBgColor) ? `  background-color: ${normalizeHex(q.contentBgColor)}${bang};` : ""
+  ]);
+  const tinymceTitleFontRule = buildRule("body#tinymce .page-title,\nbody#tinymce .box-title,\nbody#tinymce .iDeviceTitle", [
+    String(q.fontTitles) !== String(baseQuick.fontTitles) ? `  font-family: ${q.fontTitles}${bang};` : ""
+  ]);
+  const tinymceLinkRule = buildRule("body#tinymce a", [
+    normalizeHex(q.linkColor) !== normalizeHex(baseQuick.linkColor) ? `  color: ${normalizeHex(q.linkColor)}${bang};` : ""
+  ]);
+  const tinymcePageTitleRule = buildRule("body#tinymce .page-title", [
+    normalizeHex(q.titleColor) !== normalizeHex(baseQuick.titleColor) ? `  color: ${normalizeHex(q.titleColor)}${bang};` : "",
+    Number(q.pageTitleSize) !== Number(baseQuick.pageTitleSize) ? `  font-size: ${q.pageTitleSize}rem${bang};` : "",
+    String(q.pageTitleWeight) !== String(baseQuick.pageTitleWeight) ? `  font-weight: ${q.pageTitleWeight}${bang};` : "",
+    Boolean(q.pageTitleUppercase) !== Boolean(baseQuick.pageTitleUppercase) ? `  text-transform: ${q.pageTitleUppercase ? "uppercase" : "none"}${bang};` : "",
+    Number(q.pageTitleLetterSpacing) !== Number(baseQuick.pageTitleLetterSpacing) ? `  letter-spacing: ${q.pageTitleLetterSpacing}px${bang};` : "",
+    Number(q.pageTitleMarginBottom) !== Number(baseQuick.pageTitleMarginBottom) ? `  margin-bottom: ${q.pageTitleMarginBottom}rem${bang};` : ""
+  ]);
+  const tinymceBoxTitleRule = buildRule("body#tinymce .box-title,\nbody#tinymce .iDeviceTitle", [
+    normalizeHex(q.boxTitleColor) !== normalizeHex(baseQuick.boxTitleColor) ? `  color: ${normalizeHex(q.boxTitleColor)}${bang};` : "",
+    Number(q.boxTitleSize) !== Number(baseQuick.boxTitleSize) ? `  font-size: ${q.boxTitleSize}rem${bang};` : ""
+  ]);
+  const tinymceBoxContentRule = buildRule("body#tinymce .box-content,\nbody#tinymce .iDevice_content,\nbody#tinymce .iDevice_inner", [
+    normalizeHex(q.boxBgColor) !== normalizeHex(baseQuick.boxBgColor) ? `  background-color: ${normalizeHex(q.boxBgColor)}${boxBgBang};` : "",
+    String(q.boxTextAlign) !== String(baseQuick.boxTextAlign) ? `  text-align: ${q.boxTextAlign}${bang};` : "",
+    String(q.boxFontSize) !== String(baseQuick.boxFontSize) && q.boxFontSize !== "inherit" ? `  font-size: ${q.boxFontSize}${bang};` : ""
+  ]);
+  const tinymceButtonRule = buildRule("body#tinymce button:not(.toggler):not(.box-toggle)", [
+    normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) ? `  background-color: ${normalizeHex(q.buttonBgColor)}${bang};` : "",
+    normalizeHex(q.buttonTextColor) !== normalizeHex(baseQuick.buttonTextColor) ? `  color: ${normalizeHex(q.buttonTextColor)}${bang};` : "",
+    normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) ? `  border-color: ${normalizeHex(q.buttonBgColor)}${bang};` : ""
+  ]);
   const bodyRule = buildRule(bodyModeSelectors, [
     effectivePageBgColor !== baseEffectivePageBgColor ? `  background-color: ${effectivePageBgColor}${bang};` : "",
     String(q.fontBody) !== String(baseQuick.fontBody) ? `  font-family: ${q.fontBody}${bang};` : "",
@@ -5042,6 +5433,13 @@ ${boxTitleRule}
 ${boxHeadRule}
 ${boxContentRule}
 ${buttonRule}
+${tinymceBodyRule}
+${tinymceTitleFontRule}
+${tinymceLinkRule}
+${tinymcePageTitleRule}
+${tinymceBoxTitleRule}
+${tinymceBoxContentRule}
+${tinymceButtonRule}
 ${headerImageRule}
 ${headerHideTitleRule}
 ${footerImageRule}
@@ -5196,6 +5594,13 @@ function auditStyleCss(css) {
 }
 
 function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
+  if (!isActivePreviewInSelectedScope()) {
+    updatePreviewScopeStatus();
+    if (showStatus) {
+      setStatusT("status.quickScopeBlocked", "Ajustes rápidos bloqueados: la vista activa está fuera del scope CSS seleccionado.");
+    }
+    return;
+  }
   const key = String(changedKey || "").trim();
   if (key) {
     const baseValues = state.quick;
@@ -5467,10 +5872,11 @@ function previewIconUrl(name) {
 
 function buildPreviewPayload(cssText) {
   return {
-    cssText: rewriteCssUrls(cssText),
+    cssText: previewCssText(rewriteCssUrls(cssText)),
     styleJsText: styleJsText(),
     layoutMode: state.previewLayoutMode || "modern",
     legacyImport: Boolean(state.previewFromLegacyZip),
+    exportType: normalizeExportType(state.selectedExportType),
     preview: { ...PREVIEW_DEFAULTS, ...state.preview },
     iconUrls: {
       info: previewIconUrl("info"),
@@ -5509,11 +5915,28 @@ function getMainPreviewRuntime() {
 function renderPreview() {
   if (state.elpxMode) {
     state.previewPendingRender = false;
+    applySelectedExportTypeToFrame();
     applyLiveElpxCssToFrame();
     scheduleElpxThemeSync();
     return;
   }
+  const frame = els.previewFrame;
+  if (!frame) return;
+  const runtime = getMainPreviewRuntime();
+  if (!runtime) {
+    state.previewPendingRender = true;
+    try {
+      const current = new URL(frame.getAttribute("src") || frame.src || "", window.location.href);
+      const target = new URL(PREVIEW_FRAME_URL, window.location.href);
+      if (current.href !== target.href) frame.setAttribute("src", PREVIEW_FRAME_URL);
+    } catch {
+      frame.setAttribute("src", PREVIEW_FRAME_URL);
+    }
+    return;
+  }
   state.previewPendingRender = false;
+  runtime.render(buildPreviewPayload(readCss()));
+  bindClickEditFrameHandlers();
 }
 
 function styleJsText() {
@@ -7153,6 +7576,15 @@ function setupEvents() {
     input.addEventListener("change", applyPreviewTogglesFromUI);
     input.addEventListener("input", applyPreviewTogglesFromUI);
   }
+  for (const input of els.previewExportTypeInputs) {
+    input.addEventListener("change", applyPreviewSettingsFromUI);
+  }
+  for (const input of els.previewScopeInputs) {
+    input.addEventListener("change", applyPreviewSettingsFromUI);
+  }
+  for (const input of els.previewDeviceInputs) {
+    input.addEventListener("change", applyPreviewSettingsFromUI);
+  }
   // Fallback delegado por si algún toggle se renderiza/reemplaza dinámicamente.
   document.addEventListener("change", (ev) => {
     const target = ev.target;
@@ -7264,6 +7696,8 @@ async function loadDefaultBootElpx() {
   window.addEventListener("editor-i18n:changed", refreshI18nDependentUi);
   state.preview = loadPreviewToggles();
   previewToUI(state.preview);
+  Object.assign(state, loadPreviewSettings());
+  previewSettingsToUI();
   scheduleAnalyticsLoad();
   try {
     await loadOfficialStylesCatalog();

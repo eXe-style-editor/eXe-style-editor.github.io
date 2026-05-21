@@ -6239,7 +6239,7 @@ function commonRoot(paths) {
 }
 
 async function loadOfficialStylesCatalog() {
-  const manifest = await fetch("app/official-styles.json").then((r) => {
+  const manifest = await fetch(`app/official-styles.json?v=${Date.now()}`).then((r) => {
     if (!r.ok) throw new Error(i18nText("error.officialCatalogLoad", "No se pudo cargar app/official-styles.json"));
     return r.json();
   });

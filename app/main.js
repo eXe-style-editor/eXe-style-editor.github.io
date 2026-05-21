@@ -1032,7 +1032,11 @@ const els = {
   previewExportTypeInputs: Array.from(document.querySelectorAll("[data-export-type]")),
   previewScopeInputs: Array.from(document.querySelectorAll("[data-preview-scope]")),
   previewDeviceInputs: Array.from(document.querySelectorAll("[data-preview-device]")),
-  previewScopeStatus: document.getElementById("previewScopeStatus")
+  previewScopeStatus: document.getElementById("previewScopeStatus"),
+  previewPageNav: document.getElementById("previewPageNav"),
+  previewNavPrev: document.getElementById("previewNavPrev"),
+  previewNavNext: document.getElementById("previewNavNext"),
+  previewNavLabel: document.getElementById("previewNavLabel")
 };
 
 const state = {
@@ -1060,6 +1064,7 @@ const state = {
   elpxCacheName: "",
   elpxOriginalName: "",
   elpxFiles: new Map(),
+  elpxPageList: [],
   elpxThemePrefix: "theme/",
   elpxThemeFiles: new Set(),
   elpxThemeSyncTimer: 0,
@@ -2015,6 +2020,7 @@ async function deactivateElpxMode({ resetFrame = true } = {}) {
   setThemeEntryPaths({ cssPath: "style.css", jsPath: "style.js" });
   state.elpxThemeFiles.clear();
   state.elpxFiles.clear();
+  state.elpxPageList = [];
   if (state.elpxCacheName) {
     await clearElpxCaches({ keepCacheName: "" });
   }
@@ -2025,6 +2031,7 @@ async function deactivateElpxMode({ resetFrame = true } = {}) {
   if (els.elpxInput) els.elpxInput.value = "";
   if (els.elpxInputName) els.elpxInputName.textContent = i18nText("file.none", "Ningún archivo seleccionado");
   setElpxModeUi();
+  updatePreviewPageNav();
 }
 
 function convertLegacyCssToV3(cssText) {
@@ -3920,6 +3927,52 @@ function applySelectedExportTypeToFrame() {
   doc.body.classList.add(bodyClass);
 }
 
+function parseElpxPageList(indexHtml) {
+  try {
+    const doc = new DOMParser().parseFromString(indexHtml, "text/html");
+    const links = Array.from(doc.querySelectorAll("#siteNav a"));
+    if (!links.length) return [];
+    return links.map((a) => ({
+      path: normalizePath(a.getAttribute("href") || ""),
+      title: (a.textContent || "").trim()
+    })).filter((p) => p.path);
+  } catch {
+    return [];
+  }
+}
+
+function currentPageNavIndex() {
+  const pagePath = currentElpxPagePath();
+  if (!pagePath || !state.elpxPageList.length) return -1;
+  return state.elpxPageList.findIndex((p) => p.path === pagePath);
+}
+
+function updatePreviewPageNav() {
+  const nav = els.previewPageNav;
+  if (!nav) return;
+  const show = state.elpxMode && normalizeExportType(state.selectedExportType) === "scorm12" && state.elpxPageList.length > 1;
+  nav.hidden = !show;
+  if (!show) return;
+  const idx = currentPageNavIndex();
+  const total = state.elpxPageList.length;
+  const page = idx >= 0 ? state.elpxPageList[idx] : null;
+  if (els.previewNavLabel) {
+    els.previewNavLabel.innerHTML = `${idx + 1}&thinsp;/&thinsp;${total}${page ? `<strong>${page.title}</strong>` : ""}`;
+  }
+  if (els.previewNavPrev) els.previewNavPrev.disabled = idx <= 0;
+  if (els.previewNavNext) els.previewNavNext.disabled = idx < 0 || idx >= total - 1;
+}
+
+function navigatePreviewPage(delta) {
+  const idx = currentPageNavIndex();
+  if (idx < 0) return;
+  const next = idx + delta;
+  if (next < 0 || next >= state.elpxPageList.length) return;
+  const page = state.elpxPageList[next];
+  els.previewFrame?.setAttribute("src", `${elpxUrlPath(state.elpxSessionId, page.path)}?rev=${Date.now()}`);
+  setTimeout(updatePreviewPageNav, 100);
+}
+
 function applyPreviewSettingsFromUI() {
   const prev = state.selectedExportType;
   const next = previewSettingsFromUI();
@@ -3931,6 +3984,7 @@ function applyPreviewSettingsFromUI() {
   applySelectedExportTypeToFrame();
   state.previewLastElpxCss = "";
   renderPreview();
+  updatePreviewPageNav();
   if (state.elpxMode && next.selectedExportType !== prev) scheduleRuntimeExport();
 }
 
@@ -3954,6 +4008,7 @@ function setupPreviewFrame() {
       applyLiveElpxCssToFrame();
       bindClickEditFrameHandlers();
       renderLiveClickEditPreview();
+      updatePreviewPageNav();
       return;
     }
     bindClickEditFrameHandlers();
@@ -6400,6 +6455,7 @@ async function loadElpx(file) {
   }
 
   const indexHtml = packageFiles.has("index.html") ? decode(packageFiles.get("index.html")) : "";
+  state.elpxPageList = parseElpxPageList(indexHtml);
   setThemeEntryPaths(detectThemeEntryPaths(state.files.keys(), { htmlText: indexHtml, themePrefix }));
 
   if (hasThemeCssFile()) {
@@ -6443,6 +6499,7 @@ async function loadElpx(file) {
   const previewUrl = elpxUrlPath(state.elpxSessionId, startPath);
   els.previewFrame?.setAttribute("src", previewUrl);
   renderPreview();
+  updatePreviewPageNav();
   clearDirty();
   clearUndoHistory();
 
@@ -7715,6 +7772,9 @@ function setupEvents() {
       setStatus(i18nText("status.errorReplacingImage", `Error reemplazando imagen: ${err.message}`, { error: err.message }));
     }
   });
+
+  els.previewNavPrev?.addEventListener("click", () => navigatePreviewPage(-1));
+  els.previewNavNext?.addEventListener("click", () => navigatePreviewPage(1));
 
   els.exportBtn.addEventListener("click", exportZip);
   els.exportElpxBtn?.addEventListener("click", exportElpx);

@@ -73,13 +73,13 @@
 
 .busy-overlay {
   position: absolute;
-  inset: 48px 0 0 0;
+  inset: 0;
   z-index: 40;
   display: grid;
   place-items: center;
   background: rgb(15 23 42 / 0.18);
   backdrop-filter: blur(1px);
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 10px 10px;
 }
 
 .busy-card {
@@ -1336,6 +1336,7 @@ textarea:focus-visible {
 }
 
 .preview-viewport {
+  position: relative;
   min-height: 0;
   overflow: auto;
   display: flex;

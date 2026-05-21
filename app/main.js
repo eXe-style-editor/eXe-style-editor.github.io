@@ -1361,7 +1361,10 @@ function focusMetadataForRename({ preferTitle = false } = {}) {
     for (const p of els.panels) p.classList.toggle("active", p.dataset.panel === "io");
   }
   const metaDetails = document.getElementById("metaDetails");
-  if (metaDetails) metaDetails.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (metaDetails) {
+    metaDetails.open = true;
+    metaDetails.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   const target = preferTitle ? els.metaTitle : els.metaName;
   if (target) {
     target.focus();

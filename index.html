@@ -60,8 +60,8 @@
       </nav>
 
       <section class="tab-panel active" data-panel="io">
-        <div class="panel-block">
-          <h3 class="section-title"><span class="section-icon material-symbols-outlined" aria-hidden="true">folder_open</span><span data-i18n="section.loadTemplate">Cargar plantilla</span></h3>
+        <details open>
+          <summary><span class="summary-icon material-symbols-outlined" aria-hidden="true">folder_open</span><span data-i18n="section.loadTemplate">Cargar plantilla</span></summary>
           <div class="section-content">
             <div class="load-group">
               <label class="file-label" for="elpxInput"><span class="inline-icon material-symbols-outlined" aria-hidden="true">library_books</span><span data-i18n="load.elpx">Cargar proyecto ELPX</span></label>
@@ -91,10 +91,10 @@
             </div>
             <article id="officialPreview" class="official-preview" aria-live="polite"></article>
           </div>
-        </div>
+        </details>
 
-        <div class="panel-block" id="metaDetails">
-          <h3 class="section-title"><span class="section-icon material-symbols-outlined" aria-hidden="true">edit_note</span><span data-i18n="section.metaExport">Información y exportación</span></h3>
+        <details id="metaDetails">
+          <summary><span class="summary-icon material-symbols-outlined" aria-hidden="true">edit_note</span><span data-i18n="section.metaExport">Información y exportación</span></summary>
           <div class="section-content quick-grid info-grid">
             <label><span data-i18n="meta.name">Nombre</span> <input id="metaName" type="text" /></label>
             <label><span data-i18n="meta.title">Título</span> <input id="metaTitle" type="text" /></label>
@@ -118,7 +118,7 @@
             </div>
             <p id="status" class="status"></p>
           </div>
-        </div>
+        </details>
       </section>
 
       <section class="tab-panel" data-panel="quick">

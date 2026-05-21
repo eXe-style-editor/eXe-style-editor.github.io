@@ -504,7 +504,12 @@ const QUICK_PROTECTED_PATTERNS = [
 const NOTICE_VERSION = "2026-03-click-edit-guidance";
 const TRIAL_NOTICE_KEY = `editor-estilos:notice-dismissed:${NOTICE_VERSION}`;
 const PREVIEW_FRAME_URL = "app/preview.html";
-const DEFAULT_BOOT_ELPX_URL = "assets/manual_edex.elpx";
+function defaultBootElpxUrl() {
+  const lang = (document.documentElement.lang || navigator.language || "es").slice(0, 2).toLowerCase();
+  const supported = ["es", "en", "ca"];
+  const code = supported.includes(lang) ? lang : "es";
+  return `assets/manual_edex_${code}.elpx`;
+}
 const CLICK_OVERRIDES_START = "/* click-overrides:start */";
 const CLICK_OVERRIDES_END = "/* click-overrides:end */";
 const UNDO_STACK_LIMIT = 30;
@@ -1059,6 +1064,7 @@ const state = {
   previewFromLegacyZip: false,
   previewPendingRender: false,
   previewLastElpxCss: "",
+  elpxIsDefaultExample: false,
   elpxMode: false,
   elpxSessionId: "",
   elpxCacheName: "",
@@ -7506,6 +7512,7 @@ function setupEvents() {
     }
     try {
       await loadZip(file);
+      state.elpxIsDefaultExample = false;
     } catch (err) {
       setStatus(i18nText("status.errorLoadingZip", `Error cargando ZIP: ${err.message}`, { error: err.message }));
     }
@@ -7527,6 +7534,7 @@ function setupEvents() {
     try {
       setBusyOverlay(true, "Cargando ELPX…");
       await loadElpx(file);
+      state.elpxIsDefaultExample = false;
     } catch (err) {
       setStatus(i18nText("status.errorLoadingElpx", `Error cargando ELPX: ${err.message}`, { error: err.message }));
       if (els.elpxInputName) els.elpxInputName.textContent = i18nText("file.none", "Ningún archivo seleccionado");
@@ -7853,6 +7861,9 @@ function refreshI18nDependentUi() {
   updateFooterImageInfo();
   updateNavIconsInfo();
   syncDetachedEditorFromMain();
+  if (state.elpxIsDefaultExample) {
+    loadDefaultBootElpx().catch(() => {});
+  }
 }
 
 function initFooterPrivacyToggle() {
@@ -7886,16 +7897,19 @@ function initFooterPrivacyToggle() {
 }
 
 async function loadDefaultBootElpx() {
-  const response = await fetch(DEFAULT_BOOT_ELPX_URL, { cache: "no-store" });
+  const url = defaultBootElpxUrl();
+  const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
-    throw new Error(`No se pudo cargar ${DEFAULT_BOOT_ELPX_URL} (${response.status})`);
+    throw new Error(`No se pudo cargar ${url} (${response.status})`);
   }
   const blob = await response.blob();
-  const file = new File([blob], "manual_edex.elpx", { type: blob.type || "application/zip" });
+  const fileName = url.split("/").pop();
+  const file = new File([blob], fileName, { type: blob.type || "application/zip" });
   setBusyOverlay(true, i18nText("preview.loadingExample", "Cargando ejemplo..."));
   try {
     await loadElpx(file);
-    if (els.elpxInputName) els.elpxInputName.textContent = i18nText("file.defaultExampleLoaded", "manual_edex.elpx (cargado por defecto)");
+    state.elpxIsDefaultExample = true;
+    if (els.elpxInputName) els.elpxInputName.textContent = i18nText("file.defaultExampleLoaded", `${fileName} (cargado por defecto)`);
     setStatus(i18nText("status.defaultExampleLoaded", "Ejemplo cargado por defecto."));
   } finally {
     setBusyOverlay(false);
@@ -7922,7 +7936,7 @@ async function loadDefaultBootElpx() {
     await loadOfficialStylesCatalog();
     await loadDefaultBootElpx();
   } catch (err) {
-    setStatus(i18nText("status.defaultElpxLoadError", `No se pudo cargar manual_edex.elpx por defecto: ${err.message}`, { error: err.message }));
+    setStatus(i18nText("status.defaultElpxLoadError", `No se pudo cargar el ejemplo por defecto: ${err.message}`, { error: err.message }));
     setBusyOverlay(false);
   }
 })();

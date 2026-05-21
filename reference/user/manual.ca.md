@@ -90,10 +90,10 @@ Selecciona quin tipus d'exportació es mostra a la previsualització (Website, P
 
 Defineix a quins formats d'exportació s'apliquen els canvis de CSS:
 
-- **Website** → afegeix selectors .exe-web-site al CSS
-- **Pàgina única** → afegeix selectors .exe-single-page
-- **SCORM** → afegeix selectors .exe-scorm
-- **TinyMCE** → inclou estils per a l'editor intern d'eXeLearning
+- **Lloc web** → aplica els canvis al format de lloc web amb diverses pàgines i menú de navegació. És el format més habitual.
+- **Pàgina única** → aplica els canvis al format d'una sola pàgina HTML, sense navegació entre pàgines separades.
+- **SCORM** → aplica els canvis al format per a plataformes d'aprenentatge com Moodle o Chamilo, on la navegació la gestiona la pròpia plataforma.
+- **TinyMCE** → aplica estils a l'editor de text intern d'eXeLearning, on s'escriu el contingut dels iDevices. Permet que la tipografia i els colors es vegin a l'editor d'una manera semblant al resultat final. Té limitacions: els estils de capçalera, peu de pàgina, menú i navegació no tenen efecte perquè aquests elements no existeixen dins l'editor. Alguns estils globals ja s'apliquen automàticament a TinyMCE encara que aquesta opció no estigui marcada.
 
 Convé marcar només els formats que realment faràs servir per no generar CSS innecessari.
 

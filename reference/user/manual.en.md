@@ -90,10 +90,10 @@ Selects which export type is shown in the preview (Website, Single Page, SCORM).
 
 Defines which export formats the CSS changes apply to:
 
-- **Website** → adds .exe-web-site selectors to the CSS
-- **Single Page** → adds .exe-single-page selectors
-- **SCORM** → adds .exe-scorm selectors
-- **TinyMCE** → includes styles for the eXeLearning internal editor
+- **Website** → applies changes to the multi-page website format with navigation menu. This is the most common format.
+- **Single Page** → applies changes to the single HTML page format, with no navigation between separate pages.
+- **SCORM** → applies changes to the format for learning platforms such as Moodle or Chamilo, where navigation is handled by the platform itself.
+- **TinyMCE** → applies styles to the eXeLearning internal text editor, where iDevice content is written. This lets typography and colours appear in the editor in a way that is closer to the final result. It has limitations: header, footer, menu and navigation styles have no effect because those elements do not exist inside the editor. Some global styles are already applied automatically in TinyMCE even when this option is not checked.
 
 It is a good idea to check only the formats you actually intend to use, to avoid generating unnecessary CSS.
 

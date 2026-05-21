@@ -90,10 +90,10 @@ Selecciona qué tipo de exportación se muestra en la previsualización (Website
 
 Define a qué formatos de exportación se aplican los cambios de CSS:
 
-- **Website** → añade selectores .exe-web-site al CSS
-- **Página única** → añade selectores .exe-single-page
-- **SCORM** → añade selectores .exe-scorm
-- **TinyMCE** → incluye estilos para el editor interno de eXeLearning
+- **Website** → aplica los cambios al formato de sitio web con varias páginas y menú de navegación. Es el más habitual.
+- **Página única** → aplica los cambios al formato de una sola página HTML, sin navegación entre páginas separadas.
+- **SCORM** → aplica los cambios al formato para plataformas de aprendizaje como Moodle o Chamilo, donde la navegación la gestiona la propia plataforma.
+- **TinyMCE** → aplica estilos al editor de texto interno de eXeLearning, donde se escribe el contenido de los iDevices. Permite que la tipografía y los colores se vean en el editor de forma parecida al resultado final. Tiene limitaciones: los estilos de cabecera, pie de página, menú y navegación no tienen efecto porque esos elementos no existen dentro del editor. Algunos estilos globales ya se aplican automáticamente en TinyMCE aunque esta opción no esté marcada.
 
 Conviene tener marcados solo los formatos que realmente vayas a usar para no generar CSS innecesario.
 

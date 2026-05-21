@@ -3740,6 +3740,7 @@ function previewSettingsToUI() {
   }
   if (els.previewViewport) els.previewViewport.dataset.device = device;
   updatePreviewScopeStatus();
+  updatePreviewStatusBar();
 }
 
 function isActivePreviewInSelectedScope() {
@@ -3748,6 +3749,20 @@ function isActivePreviewInSelectedScope() {
   if (!exportScopes.length && !scopes.includes(TINYMCE_SCOPE)) return true;
   if (exportScopes.length === EXPORT_SCOPE_DEFAULTS.length) return true;
   return scopes.includes(selectedExportBodyClass());
+}
+
+function updatePreviewStatusBar() {
+  const bar = document.getElementById("previewStatusBar");
+  if (!bar) return;
+  const exportKey = normalizeExportType(state.selectedExportType);
+  const deviceKey = normalizePreviewDevice(state.selectedDevice);
+  const exportI18nKey = exportKey === "html5" ? "preview.exportType.website"
+    : exportKey === "html5-sp" ? "preview.exportType.single"
+    : "preview.exportType.scorm";
+  const deviceI18nKey = `preview.device.${deviceKey}`;
+  const exportLabel = i18nText(exportI18nKey, EXPORT_TYPES[exportKey]?.label || exportKey);
+  const deviceLabel = i18nText(deviceI18nKey, PREVIEW_DEVICES[deviceKey]?.label || deviceKey);
+  bar.innerHTML = `<span>${exportLabel}</span><span class="psb-sep">·</span><span>${deviceLabel}</span>`;
 }
 
 function updatePreviewScopeStatus() {
@@ -7861,6 +7876,7 @@ function refreshI18nDependentUi() {
   updateFooterImageInfo();
   updateNavIconsInfo();
   syncDetachedEditorFromMain();
+  updatePreviewStatusBar();
   if (state.elpxIsDefaultExample) {
     loadDefaultBootElpx().catch(() => {});
   }

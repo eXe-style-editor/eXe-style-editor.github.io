@@ -55,7 +55,7 @@ if [[ "$RUN_BUILD" -eq 1 ]]; then
   echo "Building bundles..."
   (
     cd "$SOURCE_REPO"
-    bun install --frozen-lockfile
+    bun install
     bun run bundle:importers
     bun run bundle:exporters
     bun run bundle:resources

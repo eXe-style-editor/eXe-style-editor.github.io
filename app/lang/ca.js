@@ -159,7 +159,7 @@ window.$i18n.ca = {
   "preview.exporting": "Generant previsualització…",
   "preview.exportType": "Format",
   "preview.exportType.website": "Lloc web",
-  "preview.exportType.single": "Single Page",
+  "preview.exportType.single": "Pàgina única",
   "preview.exportType.scorm": "SCORM",
   "preview.scope": "Àmbit",
   "preview.scope.tinymce": "TinyMCE",

@@ -159,7 +159,7 @@ window.$i18n.es = {
   "preview.exporting": "Generando previsualización…",
   "preview.exportType": "Formato",
   "preview.exportType.website": "Sitio web",
-  "preview.exportType.single": "Single Page",
+  "preview.exportType.single": "Página única",
   "preview.exportType.scorm": "SCORM",
   "preview.scope": "Ámbito",
   "preview.scope.tinymce": "TinyMCE",

@@ -3,7 +3,7 @@
   "sourceBranch": "feature/developer-menu",
   "sourceCommit": "c4286e70b12c1731a77b97a8927a8d005fc5c510",
   "sourceVersion": "0.0.0-alpha",
-  "syncedAt": "2026-05-20T11:42:29Z",
+  "syncedAt": "2026-05-20T19:34:12Z",
   "files": [
     { "path": "bundles/exporters.bundle.js", "size": 446438, "sha256": "8330aa0a24e06cf335e5eb31731f9f66fc8b10bbe798d01b66b86c30969bafb0" },
     { "path": "bundles/importers.bundle.js", "size": 411548, "sha256": "2464b48de0920b7de28ff7c8b3c5d9c3cd03a79a4d7119d532d992913070cd34" },

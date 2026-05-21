@@ -503,8 +503,6 @@ const QUICK_PROTECTED_PATTERNS = [
 ];
 const NOTICE_VERSION = "2026-03-click-edit-guidance";
 const TRIAL_NOTICE_KEY = `editor-estilos:notice-dismissed:${NOTICE_VERSION}`;
-const PREVIEW_TOGGLES_KEY = "editor-estilos:preview-toggles";
-const PREVIEW_SETTINGS_KEY = "editor-estilos:preview-settings";
 const PREVIEW_FRAME_URL = "app/preview.html";
 const DEFAULT_BOOT_ELPX_URL = "assets/manual_edex.elpx";
 const CLICK_OVERRIDES_START = "/* click-overrides:start */";
@@ -1751,6 +1749,34 @@ function rewriteElpxThemeUrls(cssText) {
 }
 
 
+function applyPreviewToggleCssToFrame() {
+  if (!state.elpxMode || !els.previewFrame?.contentDocument) return;
+  let doc;
+  try { doc = els.previewFrame.contentDocument; } catch { return; }
+  if (!doc?.head || !doc?.body) return;
+  const p = state.preview;
+  const rules = [];
+  if (!p.showSearch) {
+    // button#searchBarTogger is the fixed circular icon; #exe-client-search is the form panel
+    rules.push(`button#searchBarTogger, #exe-client-search { display: none !important; }`);
+  }
+  if (!p.showNavButtons) rules.push(`.nav-buttons { display: none !important; }`);
+  if (!p.showPageCounter) rules.push(`.page-counter { display: none !important; }`);
+  // In real ELPX exports: h1.package-title and h2.page-title inside header.page-header
+  if (!p.showPackageTitle) rules.push(`.package-title { display: none !important; }`);
+  if (!p.showPageTitle) rules.push(`.page-title { display: none !important; }`);
+  // navCollapsed: toggle siteNav-off body class (matches theme CSS body.siteNav-off rules)
+  doc.body.classList.toggle("siteNav-off", Boolean(p.navCollapsed));
+  if (p.collapseIdevices) rules.push(`.iDevice_inner, .iDevice_content, .box-content { display: none !important; }`);
+  let styleNode = doc.getElementById("editor-elpx-preview-toggles");
+  if (!styleNode) {
+    styleNode = doc.createElement("style");
+    styleNode.id = "editor-elpx-preview-toggles";
+    doc.head.appendChild(styleNode);
+  }
+  styleNode.textContent = rules.join("\n");
+}
+
 function applyLiveElpxCssToFrame() {
   if (!state.elpxMode || !els.previewFrame?.contentDocument || !hasThemeCssFile()) return;
   let doc;
@@ -1827,8 +1853,9 @@ function scheduleElpxThemeSync() {
   if (state.elpxThemeSyncTimer) clearTimeout(state.elpxThemeSyncTimer);
   state.elpxThemeSyncTimer = window.setTimeout(() => {
     state.elpxThemeSyncTimer = 0;
-    syncThemeFilesToElpxCache().catch(() => {
-      // sync errors are surfaced on export/load operations
+    syncThemeFilesToElpxCache().catch((err) => {
+      console.warn("[EdEX] ELPX theme cache sync failed:", err);
+      setStatus(i18nText("status.elpxThemeSyncError", `No se pudo actualizar la previsualización ELPX: ${err.message}`, { error: err.message }));
     });
   }, 220);
 }
@@ -1853,6 +1880,7 @@ function scheduleRuntimeExport() {
     exeRuntimeExportTimer = 0;
     renderRuntimeExport().catch((err) => {
       console.warn("[EdEX] renderRuntimeExport error:", err);
+      setStatus(i18nText("status.runtimePreviewError", `No se pudo generar la previsualización real: ${err.message}`, { error: err.message }));
       setBusyOverlay(false);
     });
   }, 400);
@@ -1915,9 +1943,14 @@ async function renderRuntimeExport() {
   }
 
   if (!exeRuntimeElpxLoaded || !exeRuntime) {
-    console.warn("[EdEX] runtime not ready for format:", format);
-    setBusyOverlay(false);
-    return;
+    try {
+      await ensureExeRuntimeLoadedFromCurrentElpx();
+    } catch (err) {
+      console.warn("[EdEX] runtime not ready for format:", format, err);
+      setStatus(i18nText("status.runtimePreviewUnavailable", `Runtime eXeLearning no disponible para ${format}: ${err.message}`, { format, error: err.message }));
+      setBusyOverlay(false);
+      return;
+    }
   }
   try {
     console.info("[EdEX] exporting format:", format);
@@ -3647,26 +3680,6 @@ function previewToUI(values) {
   }
 }
 
-function loadPreviewToggles() {
-  try {
-    const raw = window.localStorage.getItem(PREVIEW_TOGGLES_KEY);
-    if (!raw) return { ...PREVIEW_DEFAULTS };
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return { ...PREVIEW_DEFAULTS };
-    return { ...PREVIEW_DEFAULTS, ...parsed };
-  } catch {
-    return { ...PREVIEW_DEFAULTS };
-  }
-}
-
-function savePreviewToggles(values) {
-  try {
-    window.localStorage.setItem(PREVIEW_TOGGLES_KEY, JSON.stringify(values));
-  } catch {
-    // ignore storage errors
-  }
-}
-
 function normalizeExportType(value) {
   const key = String(value || "").trim();
   return Object.prototype.hasOwnProperty.call(EXPORT_TYPES, key) ? key : "html5";
@@ -3687,35 +3700,6 @@ function normalizePreviewScopes(values) {
     ? values.map((value) => String(value || "").trim()).filter((value) => known.has(value))
     : [];
   return Array.from(new Set(next));
-}
-
-function loadPreviewSettings() {
-  try {
-    const raw = window.localStorage.getItem(PREVIEW_SETTINGS_KEY);
-    if (!raw) return { selectedExportType: "html5", selectedScopes: [...PREVIEW_SCOPE_DEFAULTS], selectedDevice: PREVIEW_DEVICE_DEFAULT };
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return { selectedExportType: "html5", selectedScopes: [...PREVIEW_SCOPE_DEFAULTS], selectedDevice: PREVIEW_DEVICE_DEFAULT };
-    const scopes = normalizePreviewScopes(parsed.selectedScopes);
-    return {
-      selectedExportType: normalizeExportType(parsed.selectedExportType),
-      selectedScopes: scopes.length ? scopes : [...PREVIEW_SCOPE_DEFAULTS],
-      selectedDevice: normalizePreviewDevice(parsed.selectedDevice)
-    };
-  } catch {
-    return { selectedExportType: "html5", selectedScopes: [...PREVIEW_SCOPE_DEFAULTS], selectedDevice: PREVIEW_DEVICE_DEFAULT };
-  }
-}
-
-function savePreviewSettings() {
-  try {
-    window.localStorage.setItem(PREVIEW_SETTINGS_KEY, JSON.stringify({
-      selectedExportType: normalizeExportType(state.selectedExportType),
-      selectedScopes: normalizePreviewScopes(state.selectedScopes),
-      selectedDevice: normalizePreviewDevice(state.selectedDevice)
-    }));
-  } catch {
-    // ignore storage errors
-  }
 }
 
 function previewSettingsFromUI() {
@@ -3942,7 +3926,6 @@ function applyPreviewSettingsFromUI() {
   state.selectedExportType = next.selectedExportType;
   state.selectedScopes = next.selectedScopes;
   state.selectedDevice = next.selectedDevice;
-  savePreviewSettings();
   previewSettingsToUI();
   if (!isActivePreviewInSelectedScope()) setClickEditMode(false);
   applySelectedExportTypeToFrame();
@@ -3953,8 +3936,11 @@ function applyPreviewSettingsFromUI() {
 
 function applyPreviewTogglesFromUI() {
   state.preview = previewFromUI();
-  savePreviewToggles(state.preview);
-  renderPreview();
+  if (state.elpxMode) {
+    applyPreviewToggleCssToFrame();
+  } else {
+    renderPreview();
+  }
   setStatusT("status.previewUpdated", "Previsualización actualizada.");
 }
 
@@ -4944,17 +4930,26 @@ function quickFromCss(cssText) {
   }
   const lineHeightMatch = String(contentLineHeightRaw || bodyLineHeightRaw || "").match(/([0-9.]+)/);
   if (lineHeightMatch) q.lineHeight = Number(lineHeightMatch[1]);
-  const pageTitleSizeRaw = lastRulePropValue([".exe-content .page-title"], ["font-size"]);
+  // Page title: themes use .page-title directly (flux/neo/nova/zen) or .exe-web-site .page-title,
+  // not .exe-content .page-title (only universal does). lastRulePropValue returns the last match,
+  // so including more specific selectors after generic ones naturally prefers the scoped value.
+  const pageTitleSelectors = [
+    ".page-title",
+    ".exe-web-site .page-title",
+    ".exe-single-page .page-title",
+    ".exe-content .page-title"
+  ];
+  const pageTitleSizeRaw = lastRulePropValue(pageTitleSelectors, ["font-size"]);
   const pageTitleSizeMatch = pageTitleSizeRaw.match(/([0-9.]+)\s*rem/i);
   if (pageTitleSizeMatch) q.pageTitleSize = Number(pageTitleSizeMatch[1]);
-  const pageTitleWeightRaw = lastRulePropValue([".exe-content .page-title"], ["font-weight"]);
-  if (/^\d{3}$/.test(pageTitleWeightRaw)) q.pageTitleWeight = pageTitleWeightRaw;
-  const pageTitleUpperRaw = lastRulePropValue([".exe-content .page-title"], ["text-transform"]);
+  const pageTitleWeightRaw = lastRulePropValue(pageTitleSelectors, ["font-weight"]);
+  if (/^\d{3}$/.test(pageTitleWeightRaw) || /^(bold|normal)$/.test(pageTitleWeightRaw)) q.pageTitleWeight = pageTitleWeightRaw === "bold" ? "700" : pageTitleWeightRaw === "normal" ? "400" : pageTitleWeightRaw;
+  const pageTitleUpperRaw = lastRulePropValue(pageTitleSelectors, ["text-transform"]);
   if (pageTitleUpperRaw) q.pageTitleUppercase = pageTitleUpperRaw.toLowerCase().includes("upper");
-  const pageTitleLsRaw = lastRulePropValue([".exe-content .page-title"], ["letter-spacing"]);
+  const pageTitleLsRaw = lastRulePropValue(pageTitleSelectors, ["letter-spacing"]);
   const pageTitleLsMatch = pageTitleLsRaw.match(/([0-9.]+)\s*px/i);
   if (pageTitleLsMatch) q.pageTitleLetterSpacing = Number(pageTitleLsMatch[1]);
-  const pageTitleMbRaw = lastRulePropValue([".exe-content .page-title"], ["margin-bottom"]);
+  const pageTitleMbRaw = lastRulePropValue(pageTitleSelectors, ["margin-bottom"]);
   const pageTitleMbMatch = pageTitleMbRaw.match(/([0-9.]+)\s*rem/i);
   if (pageTitleMbMatch) q.pageTitleMarginBottom = Number(pageTitleMbMatch[1]);
   const packageTitleSelectors = [".exe-content .package-title", ".package-title", "#headerContent"];
@@ -4982,7 +4977,7 @@ function quickFromCss(cssText) {
     q.linkColor
   );
   q.titleColor = normalizeHex(
-    lastRulePropValue([".exe-content .page-title"], ["color"]) || q.titleColor,
+    lastRulePropValue(pageTitleSelectors, ["color"]) || q.titleColor,
     q.titleColor
   );
   q.textColor = normalizeHex(
@@ -6059,6 +6054,7 @@ function renderPreview() {
     state.previewPendingRender = false;
     applySelectedExportTypeToFrame();
     applyLiveElpxCssToFrame();
+    applyPreviewToggleCssToFrame();
     scheduleElpxThemeSync();
     return;
   }
@@ -6622,7 +6618,9 @@ async function exportElpx() {
     const blob = new Blob([result.data], { type: "application/zip" });
     downloadBlob(blob, downloadName);
     clearDirty();
-    setStatus(i18nText("status.elpxExportedRuntime", `ELPX exportado con runtime eXeLearning: ${downloadName}`, { filename: downloadName }));
+    refreshMetaFields();
+    setStatus(i18nText("status.elpxExportedRuntime", `ELPX exportado con runtime eXeLearning: ${downloadName}`, { filename: downloadName })
+      + " " + i18nText("status.elpxExportWarningPreviousStyle", "Aviso: en eXeLearning elimina antes el estilo anterior con ese Nombre/Título para poder importarlo."));
     return;
   } catch (err) {
     console.warn("[EdEX] runtime ELPX export failed, falling back to package rewrite:", err);
@@ -6633,12 +6631,11 @@ async function exportElpx() {
   const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
   downloadBlob(blob, downloadName);
   clearDirty();
+  refreshMetaFields();
   const autoAddedWarning = autoAddedOnExport.length
     ? i18nText("status.withWarning", ` con aviso: se crearon obligatorios: ${autoAddedOnExport.join(", ")}`, { details: autoAddedOnExport.join(", ") })
     : "";
-  const warning = renameCheck.keptOfficialMetadata
-    ? i18nText("status.elpxExportWarningPreviousStyle", " Aviso: en eXeLearning elimina antes el estilo anterior con ese Nombre/Título para poder importarlo.")
-    : "";
+  const warning = i18nText("status.elpxExportWarningPreviousStyle", " Aviso: en eXeLearning elimina antes el estilo anterior con ese Nombre/Título para poder importarlo.");
   setStatus(i18nText("status.elpxExported", `ELPX exportado correctamente (${state.elpxFiles.size} archivos).${warning}${autoAddedWarning}`, { count: state.elpxFiles.size, warning: `${warning}${autoAddedWarning}` }));
 }
 
@@ -7853,9 +7850,12 @@ async function loadDefaultBootElpx() {
   initFooterPrivacyToggle();
   refreshI18nDependentUi();
   window.addEventListener("editor-i18n:changed", refreshI18nDependentUi);
-  state.preview = loadPreviewToggles();
+  // Preview bar controls are intentionally session-only: always boot with the project defaults.
+  state.preview = { ...PREVIEW_DEFAULTS };
   previewToUI(state.preview);
-  Object.assign(state, loadPreviewSettings());
+  state.selectedExportType = "html5";
+  state.selectedScopes = [...PREVIEW_SCOPE_DEFAULTS];
+  state.selectedDevice = PREVIEW_DEVICE_DEFAULT;
   previewSettingsToUI();
   scheduleAnalyticsLoad();
   try {

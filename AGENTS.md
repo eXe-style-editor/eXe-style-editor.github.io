@@ -47,6 +47,7 @@ Prioridad acordada: **compatibilidad real con eXeLearning** y cambios automátic
 - Sanitización automática de selectores inseguros en `quick-overrides`.
 - Selectores protegidos para evitar efectos colaterales (`.box-toggle`, togglers, etc.).
 - El editor no debe exigir conocimientos de CSS para resolver errores comunes: corrige automáticamente cuando es posible.
+- Para actualizar recursos desde eXeLearning, usar `scripts/sync-exe-bundles.sh`. Este script debe mantener sincronizados tanto `app/exe-runtime/` como `reference/themes/official/` y regenerar `app/official-styles.json`; no actualizar solo una de esas partes.
 
 ## Reglas de exportación
 - Se bloquea exportación solo por incidencias críticas:
@@ -57,6 +58,7 @@ Prioridad acordada: **compatibilidad real con eXeLearning** y cambios automátic
 
 ## UX/operación
 - Aviso superior de “fase de pruebas” al iniciar; al cerrarlo no vuelve a mostrarse (persistencia en `localStorage`).
+- La barra de previsualización debe arrancar siempre con el estado por defecto y en este orden visual: Vista, Formato, Ámbito, Elementos. No guardar ni restaurar en `localStorage` la selección del usuario para Vista, Formato, Ámbito ni Elementos.
 - Pie visible con autoría y licencia AGPLv3.
 
 ## Criterio de calidad

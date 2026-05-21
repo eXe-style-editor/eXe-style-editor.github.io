@@ -257,6 +257,7 @@ body {
 
 .preview-segmented,
 .preview-scope-group,
+.preview-elements-group,
 .preview-device-group {
   display: inline-flex;
   align-items: center;
@@ -270,6 +271,7 @@ body {
 
 .preview-segmented legend,
 .preview-scope-group legend,
+.preview-elements-group legend,
 .preview-device-group legend {
   margin-right: 4px;
   color: #526071;
@@ -279,6 +281,7 @@ body {
 
 .preview-segmented label,
 .preview-scope-group label,
+.preview-elements-group label,
 .preview-device-group label {
   display: inline-flex;
   align-items: center;
@@ -297,6 +300,7 @@ body {
 
 .preview-segmented input,
 .preview-scope-group input,
+.preview-elements-group input,
 .preview-device-group input {
   position: absolute;
   opacity: 0;
@@ -305,15 +309,33 @@ body {
 
 .preview-segmented label:has(input:checked),
 .preview-scope-group label:has(input:checked),
+.preview-elements-group label:has(input:checked),
 .preview-device-group label:has(input:checked) {
   border-color: color-mix(in srgb, var(--action) 50%, #8aa0b2);
   background: #e6f6f6;
   color: var(--action-dark);
 }
 
-.preview-device-group .material-symbols-outlined {
+.preview-device-group .material-symbols-outlined,
+.preview-segmented .material-symbols-outlined,
+.preview-scope-group .material-symbols-outlined {
   font-size: 1rem;
   line-height: 1;
+}
+
+/* Ámbito CSS: único grupo que modifica el CSS exportado */
+.preview-scope-css legend {
+  color: #92400e;
+}
+.preview-scope-css label {
+  border-color: #d97706;
+  background: #fffbeb;
+  color: #92400e;
+}
+.preview-scope-css label:has(input:checked) {
+  border-color: #b45309;
+  background: #fde68a;
+  color: #78350f;
 }
 
 .preview-mode-bar .status-inline {

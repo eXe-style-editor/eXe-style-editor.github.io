@@ -5,8 +5,8 @@ usage() {
   cat <<'EOF'
 Usage: scripts/sync-exe-bundles.sh [--source PATH] [--skip-build]
 
-Copies the static eXeLearning runtime bundles needed by EdEX into
-app/exe-runtime/.
+Copies the static eXeLearning runtime bundles and official theme
+templates needed by EdEX.
 
 Options:
   --source PATH   eXeLearning checkout to sync from.
@@ -82,6 +82,9 @@ BUNDLES_DIR="$RUNTIME_DIR/bundles"
 RESOURCES_DIR="$RUNTIME_DIR/resources"
 THEMES_DIR="$RESOURCES_DIR/themes/base"
 VENDOR_DIR="$RUNTIME_DIR/vendor"
+OFFICIAL_THEMES_SOURCE="$SOURCE_REPO/public/files/perm/themes/base"
+OFFICIAL_THEMES_DIR="$REPO_ROOT/reference/themes/official"
+OFFICIAL_STYLES_JSON="$REPO_ROOT/app/official-styles.json"
 
 rm -rf "$BUNDLES_DIR" "$RESOURCES_DIR" "$VENDOR_DIR"
 mkdir -p "$BUNDLES_DIR" "$RESOURCES_DIR" "$THEMES_DIR" "$VENDOR_DIR/yjs"
@@ -102,10 +105,18 @@ else
   echo "Warning: $SOURCE_REPO/public/bundles not found; resource bundles were not copied." >&2
 fi
 
-if [[ -d "$SOURCE_REPO/public/files/perm/themes/base" ]]; then
-  cp -R "$SOURCE_REPO/public/files/perm/themes/base/." "$THEMES_DIR/"
+if [[ -d "$OFFICIAL_THEMES_SOURCE" ]]; then
+  cp -R "$OFFICIAL_THEMES_SOURCE/." "$THEMES_DIR/"
 else
   echo "Warning: base themes directory not found; base themes were not copied." >&2
+fi
+
+if [[ -d "$OFFICIAL_THEMES_SOURCE" ]]; then
+  rm -rf "$OFFICIAL_THEMES_DIR"
+  mkdir -p "$OFFICIAL_THEMES_DIR"
+  cp -R "$OFFICIAL_THEMES_SOURCE/." "$OFFICIAL_THEMES_DIR/"
+else
+  echo "Warning: base themes directory not found; official templates were not copied." >&2
 fi
 
 if [[ -d "$SOURCE_REPO/public/app/common/scorm" ]]; then
@@ -145,5 +156,71 @@ SYNCED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   printf '}\n'
 } > "$RUNTIME_DIR/manifest.json"
 
+node - "$OFFICIAL_THEMES_DIR" "$OFFICIAL_STYLES_JSON" <<'NODE'
+const fs = require("fs");
+const path = require("path");
+
+const [themesRoot, outputPath] = process.argv.slice(2);
+
+function xmlText(xml, tag) {
+  const re = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i");
+  const match = String(xml || "").match(re);
+  return match ? match[1].trim() : "";
+}
+
+function listFiles(dir) {
+  const out = [];
+  function walk(current, prefix = "") {
+    const entries = fs.readdirSync(current, { withFileTypes: true })
+      .sort((a, b) => a.name.localeCompare(b.name));
+    for (const entry of entries) {
+      const absolute = path.join(current, entry.name);
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) walk(absolute, relative);
+      else if (entry.isFile()) out.push(relative);
+    }
+  }
+  walk(dir);
+  return out;
+}
+
+if (!fs.existsSync(themesRoot)) {
+  throw new Error(`Official themes directory not found: ${themesRoot}`);
+}
+
+const styles = fs.readdirSync(themesRoot, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+  .sort((a, b) => a.localeCompare(b))
+  .map((id) => {
+    const dir = path.join(themesRoot, id);
+    const files = listFiles(dir);
+    const configPath = path.join(dir, "config.xml");
+    const configXml = fs.existsSync(configPath) ? fs.readFileSync(configPath, "utf8") : "";
+    return {
+      id,
+      dir: `reference/themes/official/${id}`,
+      files,
+      meta: {
+        name: xmlText(configXml, "name"),
+        title: xmlText(configXml, "title"),
+        version: xmlText(configXml, "version"),
+        compatibility: xmlText(configXml, "compatibility"),
+        author: xmlText(configXml, "author"),
+        description: xmlText(configXml, "description")
+      }
+    };
+  });
+
+const manifest = {
+  generatedAt: new Date().toISOString(),
+  styles
+};
+
+fs.writeFileSync(outputPath, `${JSON.stringify(manifest, null, 2)}\n`);
+NODE
+
 echo "Synced eXeLearning runtime into $RUNTIME_DIR"
+echo "Synced official theme templates into $OFFICIAL_THEMES_DIR"
+echo "Regenerated $OFFICIAL_STYLES_JSON"
 echo "Source: $SOURCE_REPO@$SOURCE_COMMIT"

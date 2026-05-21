@@ -503,8 +503,7 @@ const QUICK_PROTECTED_PATTERNS = [
 ];
 const NOTICE_VERSION = "2026-03-click-edit-guidance";
 const TRIAL_NOTICE_KEY = `editor-estilos:notice-dismissed:${NOTICE_VERSION}`;
-const PREVIEW_TOGGLES_KEY = "editor-estilos:preview-toggles";
-const PREVIEW_FRAME_URL = "about:blank";
+const PREVIEW_FRAME_URL = "app/preview.html";
 const DEFAULT_BOOT_ELPX_URL = "assets/manual_edex.elpx";
 const CLICK_OVERRIDES_START = "/* click-overrides:start */";
 const CLICK_OVERRIDES_END = "/* click-overrides:end */";
@@ -765,6 +764,30 @@ const PREVIEW_DEFAULTS = {
   showPageTitle: true,
   collapseIdevices: false
 };
+const EXPORT_TYPES = {
+  html5: {
+    label: "Website",
+    bodyClass: "exe-web-site"
+  },
+  "html5-sp": {
+    label: "Single Page",
+    bodyClass: "exe-single-page"
+  },
+  scorm12: {
+    label: "SCORM",
+    bodyClass: "exe-scorm"
+  }
+};
+const EXPORT_SCOPE_DEFAULTS = Object.values(EXPORT_TYPES).map((item) => item.bodyClass);
+const TINYMCE_SCOPE = "tinymce";
+const PREVIEW_SCOPE_DEFAULTS = [...EXPORT_SCOPE_DEFAULTS];
+const PREVIEW_SCOPE_OPTIONS = [...EXPORT_SCOPE_DEFAULTS, TINYMCE_SCOPE];
+const PREVIEW_DEVICE_DEFAULT = "desktop";
+const PREVIEW_DEVICES = {
+  desktop: { label: "Desktop" },
+  tablet: { label: "Tablet" },
+  mobile: { label: "Móvil" }
+};
 const HIGHLIGHT_BY_FILE_GROUP = {
   css: "css",
   js: "javascript",
@@ -866,6 +889,15 @@ function applyControlTooltips() {
   for (const input of els.previewInputs) {
     applyTooltipToControl(input);
   }
+  for (const input of els.previewExportTypeInputs) {
+    applyTooltipToControl(input);
+  }
+  for (const input of els.previewScopeInputs) {
+    applyTooltipToControl(input);
+  }
+  for (const input of els.previewDeviceInputs) {
+    applyTooltipToControl(input);
+  }
   for (const id of CONTROL_HELP_IDS) {
     const target = document.getElementById(id);
     applyTooltipToControl(target);
@@ -876,6 +908,7 @@ const els = {
   appShell: document.getElementById("appShell"),
   editorPanel: document.getElementById("editorPanel"),
   previewPanel: document.getElementById("previewPanel"),
+  previewViewport: document.getElementById("previewViewport"),
   helpLink: document.getElementById("helpLink"),
   busyOverlay: document.getElementById("busyOverlay"),
   busyOverlayText: document.getElementById("busyOverlayText"),
@@ -995,7 +1028,11 @@ const els = {
   faviconPreviewWrap: document.getElementById("faviconPreviewWrap"),
   faviconPreviewImage: document.getElementById("faviconPreviewImage"),
   quickInputs: Array.from(document.querySelectorAll("[data-quick]")),
-  previewInputs: Array.from(document.querySelectorAll("[data-preview]"))
+  previewInputs: Array.from(document.querySelectorAll("[data-preview]")),
+  previewExportTypeInputs: Array.from(document.querySelectorAll("[data-export-type]")),
+  previewScopeInputs: Array.from(document.querySelectorAll("[data-preview-scope]")),
+  previewDeviceInputs: Array.from(document.querySelectorAll("[data-preview-device]")),
+  previewScopeStatus: document.getElementById("previewScopeStatus")
 };
 
 const state = {
@@ -1011,6 +1048,9 @@ const state = {
   blobUrls: new Map(),
   quick: { ...QUICK_DEFAULTS },
   preview: { ...PREVIEW_DEFAULTS },
+  selectedExportType: "html5",
+  selectedScopes: [...PREVIEW_SCOPE_DEFAULTS],
+  selectedDevice: PREVIEW_DEVICE_DEFAULT,
   previewLayoutMode: "modern",
   previewFromLegacyZip: false,
   previewPendingRender: false,
@@ -1040,6 +1080,10 @@ const state = {
   isDirty: false
 };
 let highlightRenderRaf = 0;
+let exeRuntime = null;
+let exeRuntimeElpxLoaded = false;
+let exeRuntimeExportTimer = 0;
+let exeRuntimeLastFormat = "";
 const detachedEditor = {
   win: null,
   path: ""
@@ -1704,6 +1748,35 @@ function rewriteElpxThemeUrls(cssText) {
   });
 }
 
+
+function applyPreviewToggleCssToFrame() {
+  if (!state.elpxMode || !els.previewFrame?.contentDocument) return;
+  let doc;
+  try { doc = els.previewFrame.contentDocument; } catch { return; }
+  if (!doc?.head || !doc?.body) return;
+  const p = state.preview;
+  const rules = [];
+  if (!p.showSearch) {
+    // button#searchBarTogger is the fixed circular icon; #exe-client-search is the form panel
+    rules.push(`button#searchBarTogger, #exe-client-search { display: none !important; }`);
+  }
+  if (!p.showNavButtons) rules.push(`.nav-buttons { display: none !important; }`);
+  if (!p.showPageCounter) rules.push(`.page-counter { display: none !important; }`);
+  // In real ELPX exports: h1.package-title and h2.page-title inside header.page-header
+  if (!p.showPackageTitle) rules.push(`.package-title { display: none !important; }`);
+  if (!p.showPageTitle) rules.push(`.page-title { display: none !important; }`);
+  // navCollapsed: toggle siteNav-off body class (matches theme CSS body.siteNav-off rules)
+  doc.body.classList.toggle("siteNav-off", Boolean(p.navCollapsed));
+  if (p.collapseIdevices) rules.push(`.iDevice_inner, .iDevice_content, .box-content { display: none !important; }`);
+  let styleNode = doc.getElementById("editor-elpx-preview-toggles");
+  if (!styleNode) {
+    styleNode = doc.createElement("style");
+    styleNode.id = "editor-elpx-preview-toggles";
+    doc.head.appendChild(styleNode);
+  }
+  styleNode.textContent = rules.join("\n");
+}
+
 function applyLiveElpxCssToFrame() {
   if (!state.elpxMode || !els.previewFrame?.contentDocument || !hasThemeCssFile()) return;
   let doc;
@@ -1713,7 +1786,8 @@ function applyLiveElpxCssToFrame() {
     return;
   }
   if (!doc?.head) return;
-  const cssText = rewriteElpxThemeUrls(readCss());
+  applySelectedExportTypeToFrame();
+  const cssText = previewCssText(rewriteElpxThemeUrls(readCss()));
   if (cssText === state.previewLastElpxCss) return;
   let styleNode = doc.getElementById("editor-elpx-live-css");
   if (!styleNode || String(styleNode.tagName || "").toLowerCase() !== "style") {
@@ -1779,10 +1853,126 @@ function scheduleElpxThemeSync() {
   if (state.elpxThemeSyncTimer) clearTimeout(state.elpxThemeSyncTimer);
   state.elpxThemeSyncTimer = window.setTimeout(() => {
     state.elpxThemeSyncTimer = 0;
-    syncThemeFilesToElpxCache().catch(() => {
-      // sync errors are surfaced on export/load operations
+    syncThemeFilesToElpxCache().catch((err) => {
+      console.warn("[EdEX] ELPX theme cache sync failed:", err);
+      setStatus(i18nText("status.elpxThemeSyncError", `No se pudo actualizar la previsualización ELPX: ${err.message}`, { error: err.message }));
     });
   }, 220);
+}
+
+async function initExeRuntime() {
+  if (exeRuntime) return exeRuntime;
+  const mod = await import("./exe-runtime/exe-runtime.js");
+  exeRuntime = mod.createExeRuntime();
+  return exeRuntime;
+}
+
+function scheduleRuntimeExport() {
+  if (!state.elpxMode) return;
+  if (exeRuntimeExportTimer) clearTimeout(exeRuntimeExportTimer);
+  const format = state.selectedExportType;
+  if (format !== "html5") {
+    setBusyOverlay(true, i18nText("preview.exporting", "Generando previsualización…"));
+  } else {
+    setBusyOverlay(false);
+  }
+  exeRuntimeExportTimer = setTimeout(() => {
+    exeRuntimeExportTimer = 0;
+    renderRuntimeExport().catch((err) => {
+      console.warn("[EdEX] renderRuntimeExport error:", err);
+      setStatus(i18nText("status.runtimePreviewError", `No se pudo generar la previsualización real: ${err.message}`, { error: err.message }));
+      setBusyOverlay(false);
+    });
+  }, 400);
+}
+
+function currentThemeFilesForRuntime() {
+  const files = new Map();
+  for (const [path, bytes] of state.files.entries()) {
+    files.set(path, cloneBytes(bytes));
+  }
+  return files;
+}
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 0);
+}
+
+async function ensureExeRuntimeLoadedFromCurrentElpx() {
+  const rt = await initExeRuntime();
+  if (exeRuntimeElpxLoaded) return rt;
+  const zip = new window.JSZip();
+  for (const [path, bytes] of state.elpxFiles.entries()) zip.file(path, bytes);
+  const bytes = new Uint8Array(await zip.generateAsync({ type: "arraybuffer", compression: "DEFLATE" }));
+  await rt.loadElpx(bytes, { filename: state.elpxOriginalName || "project.elpx" });
+  exeRuntimeElpxLoaded = true;
+  exeRuntimeLastFormat = "";
+  return rt;
+}
+
+async function renderRuntimeExport() {
+  if (!state.elpxMode) return;
+  const sessionId = state.elpxSessionId;
+  const format = state.selectedExportType;
+  if (format === exeRuntimeLastFormat) return;
+
+  if (format === "html5") {
+    // Restore original ELPX files (may have been overwritten by a previous sp/scorm export)
+    if ("caches" in window) {
+      const cache = await window.caches.open(state.elpxCacheName);
+      for (const [path, bytes] of state.elpxFiles.entries()) {
+        await writeElpxFileToCache(cache, sessionId, path, bytes);
+      }
+      await syncThemeFilesToElpxCache();
+    }
+    exeRuntimeLastFormat = "html5";
+    const startPath = state.elpxFiles.has("index.html")
+      ? "index.html"
+      : Array.from(state.elpxFiles.keys()).find((p) => p.endsWith(".html")) || "index.html";
+    state.previewLastElpxCss = "";
+    els.previewFrame?.setAttribute("src", `${elpxUrlPath(sessionId, startPath)}?rev=${Date.now()}`);
+    return;
+  }
+
+  if (!exeRuntimeElpxLoaded || !exeRuntime) {
+    try {
+      await ensureExeRuntimeLoadedFromCurrentElpx();
+    } catch (err) {
+      console.warn("[EdEX] runtime not ready for format:", format, err);
+      setStatus(i18nText("status.runtimePreviewUnavailable", `Runtime eXeLearning no disponible para ${format}: ${err.message}`, { format, error: err.message }));
+      setBusyOverlay(false);
+      return;
+    }
+  }
+  try {
+    console.info("[EdEX] exporting format:", format);
+    const result = await exeRuntime.exportPreview({
+      format,
+      themeFiles: currentThemeFilesForRuntime()
+    });
+    if (!state.elpxMode || state.elpxSessionId !== sessionId) return;
+    if (!result?.files?.size) throw new Error(`Export for ${format} produced no files`);
+    console.info("[EdEX] export done, files:", Array.from(result.files.keys()));
+    const cache = await window.caches.open(state.elpxCacheName);
+    for (const [path, bytes] of result.files.entries()) {
+      await writeElpxFileToCache(cache, sessionId, path, bytes);
+    }
+    exeRuntimeLastFormat = format;
+    const entryPoint = result.entryPath || "index.html";
+    console.info("[EdEX] loading entry:", entryPoint);
+    state.previewLastElpxCss = "";
+    els.previewFrame?.setAttribute("src", `${elpxUrlPath(sessionId, entryPoint)}?rev=${Date.now()}`);
+  } finally {
+    setBusyOverlay(false);
+  }
 }
 
 function reloadElpxPreviewPage() {
@@ -1811,6 +2001,12 @@ async function deactivateElpxMode({ resetFrame = true } = {}) {
     clearTimeout(state.elpxThemeSyncTimer);
     state.elpxThemeSyncTimer = 0;
   }
+  if (exeRuntimeExportTimer) {
+    clearTimeout(exeRuntimeExportTimer);
+    exeRuntimeExportTimer = 0;
+  }
+  exeRuntimeElpxLoaded = false;
+  exeRuntimeLastFormat = "";
   state.elpxMode = false;
   state.previewLastElpxCss = "";
   state.elpxSessionId = "";
@@ -1824,7 +2020,7 @@ async function deactivateElpxMode({ resetFrame = true } = {}) {
   }
   state.elpxCacheName = "";
   if (resetFrame && els.previewFrame) {
-    els.previewFrame.setAttribute("src", "about:blank");
+    els.previewFrame.setAttribute("src", PREVIEW_FRAME_URL);
   }
   if (els.elpxInput) els.elpxInput.value = "";
   if (els.elpxInputName) els.elpxInputName.textContent = i18nText("file.none", "Ningún archivo seleccionado");
@@ -2980,12 +3176,41 @@ function parseClickOverrideDeclarationsObject(declarationsText) {
   return parsed;
 }
 
-function upsertClickOverrideRule(css, selector, declarations) {
+function tinymceSelectorForContentSelector(selector) {
+  const selectors = splitCssSelectorList(String(selector || ""));
+  const tinymceSelectors = [];
+  for (const selectorPart of selectors) {
+    const raw = selectorPart.trim();
+    if (!raw) continue;
+    let converted = "";
+    if (/^\.exe-content$/i.test(raw)) {
+      converted = "body#tinymce";
+    } else if (/^\.exe-content(?:\s|>|\+|~)/i.test(raw)) {
+      converted = raw.replace(/^\.exe-content/i, "body#tinymce");
+    } else if (/^body#tinymce\b/i.test(raw)) {
+      converted = raw;
+    }
+    if (converted && !tinymceSelectors.includes(converted)) tinymceSelectors.push(converted);
+  }
+  return tinymceSelectors.join(",\n");
+}
+
+function upsertClickOverrideRule(css, selector, declarations, { includeTinymce = false, exportScopes = [] } = {}) {
   const cleanSelector = String(selector || "").trim();
   if (!cleanSelector || !declarations || typeof declarations !== "object") return css;
+  const shouldWrapExport = exportScopes.length > 0 && exportScopes.length < EXPORT_SCOPE_DEFAULTS.length;
+  const parts = shouldWrapExport
+    ? exportScopes.map((scope) => prefixSelectorWithBodyClass(cleanSelector, scope))
+    : [cleanSelector];
+  if (includeTinymce) {
+    const tinymceSelector = tinymceSelectorForContentSelector(cleanSelector);
+    if (tinymceSelector) parts.push(tinymceSelector);
+  }
+  const effectiveSelector = parts.join(",\n");
   let block = getClickOverridesBlock(css).trim();
   const selectorRe = new RegExp(`${escapeRegExp(cleanSelector)}\\s*\\{[\\s\\S]*?\\}`, "i");
-  const existingMatch = block.match(selectorRe);
+  const effectiveSelectorRe = new RegExp(`${escapeRegExp(effectiveSelector)}\\s*\\{[\\s\\S]*?\\}`, "i");
+  const existingMatch = block.match(effectiveSelectorRe) || block.match(selectorRe);
   const existingDeclarations = existingMatch
     ? parseClickOverrideDeclarationsObject(existingMatch[0].replace(/^[^{]*\{|\}$/g, ""))
     : {};
@@ -3000,8 +3225,10 @@ function upsertClickOverrideRule(css, selector, declarations) {
     lines.push(`  ${prop}: ${value} !important;`);
   }
   if (!lines.length) return css;
-  block = block.replace(selectorRe, "").trim();
-  const rule = `${cleanSelector} {\n${lines.join("\n")}\n}`;
+  // Remove any existing rule for this selector, with or without an appended tinymce selector
+  const anyVariantRe = new RegExp(`${escapeRegExp(cleanSelector)}[^{}]*\\{[^{}]*\\}`, "i");
+  block = block.replace(effectiveSelectorRe, "").replace(anyVariantRe, "").replace(selectorRe, "").trim();
+  const rule = `${effectiveSelector} {\n${lines.join("\n")}\n}`;
   block = block ? `${block}\n\n${rule}` : rule;
   return writeClickOverridesBlock(css, block);
 }
@@ -3453,30 +3680,267 @@ function previewToUI(values) {
   }
 }
 
-function loadPreviewToggles() {
-  try {
-    const raw = window.localStorage.getItem(PREVIEW_TOGGLES_KEY);
-    if (!raw) return { ...PREVIEW_DEFAULTS };
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return { ...PREVIEW_DEFAULTS };
-    return { ...PREVIEW_DEFAULTS, ...parsed };
-  } catch {
-    return { ...PREVIEW_DEFAULTS };
-  }
+function normalizeExportType(value) {
+  const key = String(value || "").trim();
+  return Object.prototype.hasOwnProperty.call(EXPORT_TYPES, key) ? key : "html5";
 }
 
-function savePreviewToggles(values) {
-  try {
-    window.localStorage.setItem(PREVIEW_TOGGLES_KEY, JSON.stringify(values));
-  } catch {
-    // ignore storage errors
+function selectedExportBodyClass() {
+  return EXPORT_TYPES[normalizeExportType(state.selectedExportType)].bodyClass;
+}
+
+function normalizePreviewDevice(value) {
+  const key = String(value || "").trim();
+  return Object.prototype.hasOwnProperty.call(PREVIEW_DEVICES, key) ? key : PREVIEW_DEVICE_DEFAULT;
+}
+
+function normalizePreviewScopes(values) {
+  const known = new Set(PREVIEW_SCOPE_OPTIONS);
+  const next = Array.isArray(values)
+    ? values.map((value) => String(value || "").trim()).filter((value) => known.has(value))
+    : [];
+  return Array.from(new Set(next));
+}
+
+function previewSettingsFromUI() {
+  const checkedType = els.previewExportTypeInputs.find((input) => input.checked)?.value || "html5";
+  const checkedDevice = els.previewDeviceInputs.find((input) => input.checked)?.value || PREVIEW_DEVICE_DEFAULT;
+  return {
+    selectedExportType: normalizeExportType(checkedType),
+    selectedScopes: normalizePreviewScopes(els.previewScopeInputs.filter((input) => input.checked).map((input) => input.value)),
+    selectedDevice: normalizePreviewDevice(checkedDevice)
+  };
+}
+
+function previewSettingsToUI() {
+  const exportType = normalizeExportType(state.selectedExportType);
+  const scopes = new Set(normalizePreviewScopes(state.selectedScopes));
+  const device = normalizePreviewDevice(state.selectedDevice);
+  for (const input of els.previewExportTypeInputs) {
+    input.checked = normalizeExportType(input.value) === exportType;
   }
+  for (const input of els.previewScopeInputs) {
+    input.checked = scopes.has(String(input.value || ""));
+  }
+  for (const input of els.previewDeviceInputs) {
+    input.checked = normalizePreviewDevice(input.value) === device;
+  }
+  if (els.previewViewport) els.previewViewport.dataset.device = device;
+  updatePreviewScopeStatus();
+}
+
+function isActivePreviewInSelectedScope() {
+  const scopes = normalizePreviewScopes(state.selectedScopes);
+  const exportScopes = scopes.filter((scope) => EXPORT_SCOPE_DEFAULTS.includes(scope));
+  if (!exportScopes.length && !scopes.includes(TINYMCE_SCOPE)) return true;
+  if (exportScopes.length === EXPORT_SCOPE_DEFAULTS.length) return true;
+  return scopes.includes(selectedExportBodyClass());
+}
+
+function updatePreviewScopeStatus() {
+  if (!els.previewScopeStatus) return;
+  const scopes = normalizePreviewScopes(state.selectedScopes);
+  const exportType = EXPORT_TYPES[normalizeExportType(state.selectedExportType)];
+  const allExportSelected = scopes.length >= EXPORT_SCOPE_DEFAULTS.length && EXPORT_SCOPE_DEFAULTS.every((s) => scopes.includes(s));
+
+  let msg = "";
+  if (!scopes.length) {
+    msg = i18nText("preview.scope.none", "Sin scope: el CSS temporal se aplica sin envolver.");
+  } else if (!isActivePreviewInSelectedScope()) {
+    msg = i18nText(
+      "preview.scope.outsideActive",
+      "Vista activa ({label}) fuera del scope; la edición rápida queda bloqueada.",
+      { label: exportType.label }
+    );
+  } else if (!allExportSelected) {
+    msg = i18nText(
+      "preview.scope.active",
+      "Scope activo: {count} formato(s).",
+      { count: scopes.filter((s) => EXPORT_SCOPE_DEFAULTS.includes(s)).length }
+    );
+  }
+
+  els.previewScopeStatus.textContent = msg;
+  els.previewScopeStatus.hidden = !msg;
+}
+
+function splitCssSelectorList(selectorText) {
+  const selectors = [];
+  let current = "";
+  let paren = 0;
+  let bracket = 0;
+  let quote = "";
+  for (let i = 0; i < selectorText.length; i += 1) {
+    const ch = selectorText[i];
+    const prev = selectorText[i - 1] || "";
+    if (quote) {
+      current += ch;
+      if (ch === quote && prev !== "\\") quote = "";
+      continue;
+    }
+    if (ch === "\"" || ch === "'") {
+      quote = ch;
+      current += ch;
+      continue;
+    }
+    if (ch === "(") paren += 1;
+    else if (ch === ")") paren = Math.max(0, paren - 1);
+    else if (ch === "[") bracket += 1;
+    else if (ch === "]") bracket = Math.max(0, bracket - 1);
+    if (ch === "," && paren === 0 && bracket === 0) {
+      selectors.push(current.trim());
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) selectors.push(current.trim());
+  return selectors;
+}
+
+function prefixSelectorWithBodyClass(selector, bodyClass) {
+  const clean = String(selector || "").trim();
+  if (!clean) return "";
+  if (bodyClass === TINYMCE_SCOPE) {
+    if (/\bbody#tinymce\b/i.test(clean)) return clean;
+    if (/^body\b/i.test(clean)) return clean.replace(/^body\b/i, "body#tinymce");
+    if (/^html\s+body\b/i.test(clean)) return clean.replace(/^html\s+body\b/i, "html body#tinymce");
+    if (/^:root\b/i.test(clean)) return clean.replace(/^:root\b/i, "body#tinymce");
+    return `body#tinymce ${clean.replace(/(^|[\s>+~])\.exe-content(?=$|[\s>+~.#:[,])/g, "$1").trim()}`;
+  }
+  if (new RegExp(`\\b${escapeRegExp(bodyClass)}\\b`).test(clean)) return clean;
+  const bodyPrefix = `body.${bodyClass}`;
+  if (/^body\b/i.test(clean)) return clean.replace(/^body\b/i, bodyPrefix);
+  if (/^html\s+body\b/i.test(clean)) return clean.replace(/^html\s+body\b/i, `html ${bodyPrefix}`);
+  if (/^:root\b/i.test(clean)) return clean.replace(/^:root\b/i, bodyPrefix);
+  return `${bodyPrefix} ${clean}`;
+}
+
+function findMatchingCssBrace(cssText, openIndex) {
+  let depth = 0;
+  let quote = "";
+  let comment = false;
+  for (let i = openIndex; i < cssText.length; i += 1) {
+    const ch = cssText[i];
+    const next = cssText[i + 1] || "";
+    const prev = cssText[i - 1] || "";
+    if (comment) {
+      if (ch === "*" && next === "/") {
+        comment = false;
+        i += 1;
+      }
+      continue;
+    }
+    if (quote) {
+      if (ch === quote && prev !== "\\") quote = "";
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      comment = true;
+      i += 1;
+      continue;
+    }
+    if (ch === "\"" || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+function wrapCssRulesWithScopes(cssText, scopes) {
+  const css = String(cssText || "");
+  let out = "";
+  let cursor = 0;
+  while (cursor < css.length) {
+    const open = css.indexOf("{", cursor);
+    if (open < 0) {
+      out += css.slice(cursor);
+      break;
+    }
+    const close = findMatchingCssBrace(css, open);
+    if (close < 0) {
+      out += css.slice(cursor);
+      break;
+    }
+    const preludeRaw = css.slice(cursor, open);
+    const commentPrefix = preludeRaw.match(/^\s*(?:\/\*[\s\S]*?\*\/\s*)*/)?.[0] || "";
+    const prelude = preludeRaw.slice(commentPrefix.length).trim();
+    const body = css.slice(open + 1, close);
+    const leading = commentPrefix || (preludeRaw.match(/^\s*/)?.[0] || "");
+    if (!prelude || prelude.startsWith("/*")) {
+      out += css.slice(cursor, close + 1);
+    } else if (prelude.startsWith("@")) {
+      if (/^@(media|supports|container|document|layer)\b/i.test(prelude)) {
+        out += `${leading}${prelude} {\n${wrapCssRulesWithScopes(body, scopes)}\n}`;
+      } else {
+        out += css.slice(cursor, close + 1);
+      }
+    } else {
+      const selectors = splitCssSelectorList(prelude);
+      const scopedSelectors = [];
+      for (const scope of scopes) {
+        for (const selector of selectors) scopedSelectors.push(prefixSelectorWithBodyClass(selector, scope));
+      }
+      out += `${leading}${scopedSelectors.join(",\n")} {${body}}`;
+    }
+    cursor = close + 1;
+  }
+  return out;
+}
+
+function buildScopeWrapped(cssText, selectedBodyClasses) {
+  const scopes = normalizePreviewScopes(selectedBodyClasses);
+  const exportScopes = scopes.filter((scope) => EXPORT_SCOPE_DEFAULTS.includes(scope));
+  const onlyAllExportScopes = exportScopes.length === EXPORT_SCOPE_DEFAULTS.length && !scopes.includes(TINYMCE_SCOPE);
+  if (!scopes.length || onlyAllExportScopes) return String(cssText || "");
+  return wrapCssRulesWithScopes(cssText, scopes);
+}
+
+function buildExportScopeWrapped(cssText, selectedScopes) {
+  const exportScopes = normalizePreviewScopes(selectedScopes).filter((s) => EXPORT_SCOPE_DEFAULTS.includes(s));
+  if (!exportScopes.length || exportScopes.length === EXPORT_SCOPE_DEFAULTS.length) return String(cssText || "");
+  return wrapCssRulesWithScopes(cssText, exportScopes);
+}
+
+function previewCssText(cssText) {
+  return buildScopeWrapped(cssText, state.selectedScopes);
+}
+
+function applySelectedExportTypeToFrame() {
+  const bodyClass = selectedExportBodyClass();
+  const doc = els.previewFrame?.contentDocument || null;
+  if (!doc?.body) return;
+  for (const className of PREVIEW_SCOPE_DEFAULTS) doc.body.classList.remove(className);
+  doc.body.classList.add(bodyClass);
+}
+
+function applyPreviewSettingsFromUI() {
+  const prev = state.selectedExportType;
+  const next = previewSettingsFromUI();
+  state.selectedExportType = next.selectedExportType;
+  state.selectedScopes = next.selectedScopes;
+  state.selectedDevice = next.selectedDevice;
+  previewSettingsToUI();
+  if (!isActivePreviewInSelectedScope()) setClickEditMode(false);
+  applySelectedExportTypeToFrame();
+  state.previewLastElpxCss = "";
+  renderPreview();
+  if (state.elpxMode && next.selectedExportType !== prev) scheduleRuntimeExport();
 }
 
 function applyPreviewTogglesFromUI() {
   state.preview = previewFromUI();
-  savePreviewToggles(state.preview);
-  renderPreview();
+  if (state.elpxMode) {
+    applyPreviewToggleCssToFrame();
+  } else {
+    renderPreview();
+  }
   setStatusT("status.previewUpdated", "Previsualización actualizada.");
 }
 
@@ -3811,6 +4275,10 @@ function syncQuickControlsFromClickEdit(baseSelector, declarations, options = {}
 
 function renderLiveClickEditPreview() {
   if (!state.elpxMode || !els.clickEditModal || els.clickEditModal.hidden) return;
+  if (!isActivePreviewInSelectedScope()) {
+    removeLiveClickEditPreviewStyle();
+    return;
+  }
   const selector = expandedClickEditSelector();
   const previewBlocks = [];
   const showCompactNoHeaderPreview = Boolean(
@@ -3865,7 +4333,7 @@ function renderLiveClickEditPreview() {
     node.id = "editor-click-live-edit-style";
     doc.head.appendChild(node);
   }
-  node.textContent = `${previewBlocks.join("\n\n")}\n`;
+  node.textContent = `${previewCssText(previewBlocks.join("\n\n"))}\n`;
 }
 
 function openClickEditModal() {
@@ -4205,6 +4673,14 @@ function bindClickEditFrameHandlers() {
 }
 
 function setClickEditMode(nextMode) {
+  if (nextMode && !isActivePreviewInSelectedScope()) {
+    state.clickEditMode = false;
+    setClickEditButtonState();
+    closeClickEditModal();
+    updatePreviewScopeStatus();
+    setStatusT("status.clickEditScopeBlocked", "Edición por clic bloqueada: la vista activa está fuera del scope CSS seleccionado.");
+    return;
+  }
   state.clickEditMode = Boolean(nextMode);
   setClickEditButtonState();
   if (!state.clickEditMode) {
@@ -4222,6 +4698,11 @@ function toggleClickEditMode() {
 }
 
 function applyClickEditChanges() {
+  if (!isActivePreviewInSelectedScope()) {
+    setStatusT("status.clickEditScopeBlocked", "Edición por clic bloqueada: la vista activa está fuera del scope CSS seleccionado.");
+    closeClickEditModal();
+    return;
+  }
   const baseSelector = String(state.clickEditTargetSelector || "").trim();
   if (!baseSelector) {
     setStatusT("status.noElementSelected", "No hay elemento seleccionado para aplicar cambios.");
@@ -4241,7 +4722,10 @@ function applyClickEditChanges() {
   const withInteractiveStates = selector.includes(":hover");
   const declarations = currentClickEditDeclarations();
   const css = readCss();
-  const nextCss = upsertClickOverrideRule(css, selector, declarations);
+  const nextCss = upsertClickOverrideRule(css, selector, declarations, {
+    includeTinymce: state.selectedScopes.includes(TINYMCE_SCOPE),
+    exportScopes: state.selectedScopes.filter((s) => EXPORT_SCOPE_DEFAULTS.includes(s))
+  });
   state.clickEditIgnoreUntil = Date.now() + 350;
   if (nextCss === css) {
     closeClickEditModal();
@@ -4446,17 +4930,26 @@ function quickFromCss(cssText) {
   }
   const lineHeightMatch = String(contentLineHeightRaw || bodyLineHeightRaw || "").match(/([0-9.]+)/);
   if (lineHeightMatch) q.lineHeight = Number(lineHeightMatch[1]);
-  const pageTitleSizeRaw = lastRulePropValue([".exe-content .page-title"], ["font-size"]);
+  // Page title: themes use .page-title directly (flux/neo/nova/zen) or .exe-web-site .page-title,
+  // not .exe-content .page-title (only universal does). lastRulePropValue returns the last match,
+  // so including more specific selectors after generic ones naturally prefers the scoped value.
+  const pageTitleSelectors = [
+    ".page-title",
+    ".exe-web-site .page-title",
+    ".exe-single-page .page-title",
+    ".exe-content .page-title"
+  ];
+  const pageTitleSizeRaw = lastRulePropValue(pageTitleSelectors, ["font-size"]);
   const pageTitleSizeMatch = pageTitleSizeRaw.match(/([0-9.]+)\s*rem/i);
   if (pageTitleSizeMatch) q.pageTitleSize = Number(pageTitleSizeMatch[1]);
-  const pageTitleWeightRaw = lastRulePropValue([".exe-content .page-title"], ["font-weight"]);
-  if (/^\d{3}$/.test(pageTitleWeightRaw)) q.pageTitleWeight = pageTitleWeightRaw;
-  const pageTitleUpperRaw = lastRulePropValue([".exe-content .page-title"], ["text-transform"]);
+  const pageTitleWeightRaw = lastRulePropValue(pageTitleSelectors, ["font-weight"]);
+  if (/^\d{3}$/.test(pageTitleWeightRaw) || /^(bold|normal)$/.test(pageTitleWeightRaw)) q.pageTitleWeight = pageTitleWeightRaw === "bold" ? "700" : pageTitleWeightRaw === "normal" ? "400" : pageTitleWeightRaw;
+  const pageTitleUpperRaw = lastRulePropValue(pageTitleSelectors, ["text-transform"]);
   if (pageTitleUpperRaw) q.pageTitleUppercase = pageTitleUpperRaw.toLowerCase().includes("upper");
-  const pageTitleLsRaw = lastRulePropValue([".exe-content .page-title"], ["letter-spacing"]);
+  const pageTitleLsRaw = lastRulePropValue(pageTitleSelectors, ["letter-spacing"]);
   const pageTitleLsMatch = pageTitleLsRaw.match(/([0-9.]+)\s*px/i);
   if (pageTitleLsMatch) q.pageTitleLetterSpacing = Number(pageTitleLsMatch[1]);
-  const pageTitleMbRaw = lastRulePropValue([".exe-content .page-title"], ["margin-bottom"]);
+  const pageTitleMbRaw = lastRulePropValue(pageTitleSelectors, ["margin-bottom"]);
   const pageTitleMbMatch = pageTitleMbRaw.match(/([0-9.]+)\s*rem/i);
   if (pageTitleMbMatch) q.pageTitleMarginBottom = Number(pageTitleMbMatch[1]);
   const packageTitleSelectors = [".exe-content .package-title", ".package-title", "#headerContent"];
@@ -4484,7 +4977,7 @@ function quickFromCss(cssText) {
     q.linkColor
   );
   q.titleColor = normalizeHex(
-    lastRulePropValue([".exe-content .page-title"], ["color"]) || q.titleColor,
+    lastRulePropValue(pageTitleSelectors, ["color"]) || q.titleColor,
     q.titleColor
   );
   q.textColor = normalizeHex(
@@ -4930,6 +5423,41 @@ ${joinSelectorList([
     if (!lines.length) return "";
     return `${selector} {\n${lines.join("\n")}\n}\n`;
   };
+  const tinymceBodyRule = buildRule("body#tinymce", [
+    String(q.fontBody) !== String(baseQuick.fontBody) ? `  font-family: ${q.fontBody}${bang};` : "",
+    Number(q.baseFontSize) !== Number(baseQuick.baseFontSize) ? `  font-size: ${q.baseFontSize}px${bang};` : "",
+    Number(q.lineHeight) !== Number(baseQuick.lineHeight) ? `  line-height: ${q.lineHeight}${bang};` : "",
+    normalizeHex(q.textColor) !== normalizeHex(baseQuick.textColor) ? `  color: ${normalizeHex(q.textColor)}${bang};` : "",
+    normalizeHex(q.contentBgColor) !== normalizeHex(baseQuick.contentBgColor) ? `  background-color: ${normalizeHex(q.contentBgColor)}${bang};` : ""
+  ]);
+  const tinymceTitleFontRule = buildRule("body#tinymce .page-title,\nbody#tinymce .box-title,\nbody#tinymce .iDeviceTitle", [
+    String(q.fontTitles) !== String(baseQuick.fontTitles) ? `  font-family: ${q.fontTitles}${bang};` : ""
+  ]);
+  const tinymceLinkRule = buildRule("body#tinymce a", [
+    normalizeHex(q.linkColor) !== normalizeHex(baseQuick.linkColor) ? `  color: ${normalizeHex(q.linkColor)}${bang};` : ""
+  ]);
+  const tinymcePageTitleRule = buildRule("body#tinymce .page-title", [
+    normalizeHex(q.titleColor) !== normalizeHex(baseQuick.titleColor) ? `  color: ${normalizeHex(q.titleColor)}${bang};` : "",
+    Number(q.pageTitleSize) !== Number(baseQuick.pageTitleSize) ? `  font-size: ${q.pageTitleSize}rem${bang};` : "",
+    String(q.pageTitleWeight) !== String(baseQuick.pageTitleWeight) ? `  font-weight: ${q.pageTitleWeight}${bang};` : "",
+    Boolean(q.pageTitleUppercase) !== Boolean(baseQuick.pageTitleUppercase) ? `  text-transform: ${q.pageTitleUppercase ? "uppercase" : "none"}${bang};` : "",
+    Number(q.pageTitleLetterSpacing) !== Number(baseQuick.pageTitleLetterSpacing) ? `  letter-spacing: ${q.pageTitleLetterSpacing}px${bang};` : "",
+    Number(q.pageTitleMarginBottom) !== Number(baseQuick.pageTitleMarginBottom) ? `  margin-bottom: ${q.pageTitleMarginBottom}rem${bang};` : ""
+  ]);
+  const tinymceBoxTitleRule = buildRule("body#tinymce .box-title,\nbody#tinymce .iDeviceTitle", [
+    normalizeHex(q.boxTitleColor) !== normalizeHex(baseQuick.boxTitleColor) ? `  color: ${normalizeHex(q.boxTitleColor)}${bang};` : "",
+    Number(q.boxTitleSize) !== Number(baseQuick.boxTitleSize) ? `  font-size: ${q.boxTitleSize}rem${bang};` : ""
+  ]);
+  const tinymceBoxContentRule = buildRule("body#tinymce .box-content,\nbody#tinymce .iDevice_content,\nbody#tinymce .iDevice_inner", [
+    normalizeHex(q.boxBgColor) !== normalizeHex(baseQuick.boxBgColor) ? `  background-color: ${normalizeHex(q.boxBgColor)}${boxBgBang};` : "",
+    String(q.boxTextAlign) !== String(baseQuick.boxTextAlign) ? `  text-align: ${q.boxTextAlign}${bang};` : "",
+    String(q.boxFontSize) !== String(baseQuick.boxFontSize) && q.boxFontSize !== "inherit" ? `  font-size: ${q.boxFontSize}${bang};` : ""
+  ]);
+  const tinymceButtonRule = buildRule("body#tinymce button:not(.toggler):not(.box-toggle)", [
+    normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) ? `  background-color: ${normalizeHex(q.buttonBgColor)}${bang};` : "",
+    normalizeHex(q.buttonTextColor) !== normalizeHex(baseQuick.buttonTextColor) ? `  color: ${normalizeHex(q.buttonTextColor)}${bang};` : "",
+    normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) ? `  border-color: ${normalizeHex(q.buttonBgColor)}${bang};` : ""
+  ]);
   const bodyRule = buildRule(bodyModeSelectors, [
     effectivePageBgColor !== baseEffectivePageBgColor ? `  background-color: ${effectivePageBgColor}${bang};` : "",
     String(q.fontBody) !== String(baseQuick.fontBody) ? `  font-family: ${q.fontBody}${bang};` : "",
@@ -5042,6 +5570,13 @@ ${boxTitleRule}
 ${boxHeadRule}
 ${boxContentRule}
 ${buttonRule}
+${tinymceBodyRule}
+${tinymceTitleFontRule}
+${tinymceLinkRule}
+${tinymcePageTitleRule}
+${tinymceBoxTitleRule}
+${tinymceBoxContentRule}
+${tinymceButtonRule}
 ${headerImageRule}
 ${headerHideTitleRule}
 ${footerImageRule}
@@ -5196,6 +5731,13 @@ function auditStyleCss(css) {
 }
 
 function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
+  if (!isActivePreviewInSelectedScope()) {
+    updatePreviewScopeStatus();
+    if (showStatus) {
+      setStatusT("status.quickScopeBlocked", "Ajustes rápidos bloqueados: la vista activa está fuera del scope CSS seleccionado.");
+    }
+    return;
+  }
   const key = String(changedKey || "").trim();
   if (key) {
     const baseValues = state.quick;
@@ -5217,7 +5759,7 @@ function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
       enabled: Boolean(state.quick.compactNoHeaderIdevices),
       important: false
     });
-    const quickCss = [quickWithoutCompact, compactChunk].filter(Boolean).join("\n\n").trim();
+    const quickCss = buildExportScopeWrapped([quickWithoutCompact, compactChunk].filter(Boolean).join("\n\n").trim(), state.selectedScopes);
     const css = `${baseCss}\n\n/* quick-overrides:start */\n${quickCss}\n/* quick-overrides:end */\n`;
     writeCss(css);
     markDirty();
@@ -5225,7 +5767,7 @@ function applyQuickControls({ showStatus = true, changedKey = "" } = {}) {
     return;
   }
   const baseCss = stripQuickBlock(readCss());
-  const quickCss = buildQuickCss({ important: false, base: quickFromCss(baseCss) });
+  const quickCss = buildExportScopeWrapped(buildQuickCss({ important: false, base: quickFromCss(baseCss) }), state.selectedScopes);
   const cleanedBaseCss = pruneClickOverridesConflicts(baseCss, quickCss);
   const css = `${cleanedBaseCss}\n\n/* quick-overrides:start */\n${quickCss}\n/* quick-overrides:end */\n`;
   writeCss(css);
@@ -5467,10 +6009,11 @@ function previewIconUrl(name) {
 
 function buildPreviewPayload(cssText) {
   return {
-    cssText: rewriteCssUrls(cssText),
+    cssText: previewCssText(rewriteCssUrls(cssText)),
     styleJsText: styleJsText(),
     layoutMode: state.previewLayoutMode || "modern",
     legacyImport: Boolean(state.previewFromLegacyZip),
+    exportType: normalizeExportType(state.selectedExportType),
     preview: { ...PREVIEW_DEFAULTS, ...state.preview },
     iconUrls: {
       info: previewIconUrl("info"),
@@ -5509,11 +6052,29 @@ function getMainPreviewRuntime() {
 function renderPreview() {
   if (state.elpxMode) {
     state.previewPendingRender = false;
+    applySelectedExportTypeToFrame();
     applyLiveElpxCssToFrame();
+    applyPreviewToggleCssToFrame();
     scheduleElpxThemeSync();
     return;
   }
+  const frame = els.previewFrame;
+  if (!frame) return;
+  const runtime = getMainPreviewRuntime();
+  if (!runtime) {
+    state.previewPendingRender = true;
+    try {
+      const current = new URL(frame.getAttribute("src") || frame.src || "", window.location.href);
+      const target = new URL(PREVIEW_FRAME_URL, window.location.href);
+      if (current.href !== target.href) frame.setAttribute("src", PREVIEW_FRAME_URL);
+    } catch {
+      frame.setAttribute("src", PREVIEW_FRAME_URL);
+    }
+    return;
+  }
   state.previewPendingRender = false;
+  runtime.render(buildPreviewPayload(readCss()));
+  bindClickEditFrameHandlers();
 }
 
 function styleJsText() {
@@ -5885,6 +6446,19 @@ async function loadElpx(file) {
   clearDirty();
   clearUndoHistory();
 
+  // Load into runtime in background so it's ready when the user switches format (non-blocking)
+  const _elpxFileRef = file;
+  const _elpxSessionRef = state.elpxSessionId;
+  initExeRuntime()
+    .then((rt) => rt.loadElpx(_elpxFileRef, { filename: state.elpxOriginalName }))
+    .then(() => {
+      if (!state.elpxMode || state.elpxSessionId !== _elpxSessionRef) return;
+      exeRuntimeElpxLoaded = true;
+      exeRuntimeLastFormat = "html5"; // ELPX already in cache as html5 — no need to re-export
+      console.info("[EdEX] runtime ready for format switching");
+    })
+    .catch((err) => { console.warn("[EdEX] runtime load failed:", err); });
+
   const autoAddedMsg = autoAddedOnLoad.length
     ? i18nText("status.elpxThemeFilesAdded", ` Se añadieron ficheros de tema faltantes: ${autoAddedOnLoad.join(", ")}.`, { files: autoAddedOnLoad.join(", ") })
     : "";
@@ -5982,15 +6556,7 @@ async function exportZip() {
   const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
 
   const name = (els.metaName.value || "style").replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase();
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${name}.zip`;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    URL.revokeObjectURL(a.href);
-    a.remove();
-  }, 0);
+  downloadBlob(blob, `${name}.zip`);
 
   clearDirty();
   const warnings = [];
@@ -6036,27 +6602,40 @@ async function exportElpx() {
   }
   await syncElpxProjectThemeNameReference();
   await syncThemeFilesToElpxCache({ replaceTheme: true });
+  const original = String(state.elpxOriginalName || "project.elpx").replace(/\.elpx$/i, "");
+  const safe = safeFileName(original) || "project";
+  const downloadName = `${safe}-mod.elpx`;
+  try {
+    const rt = await ensureExeRuntimeLoadedFromCurrentElpx();
+    const result = await rt.exportPackage({
+      format: "elpx",
+      filename: downloadName,
+      themeFiles: currentThemeFilesForRuntime(),
+      metadata: {
+        theme: getCurrentThemeNameFromConfigXml() || "base"
+      }
+    });
+    const blob = new Blob([result.data], { type: "application/zip" });
+    downloadBlob(blob, downloadName);
+    clearDirty();
+    refreshMetaFields();
+    setStatus(i18nText("status.elpxExportedRuntime", `ELPX exportado con runtime eXeLearning: ${downloadName}`, { filename: downloadName })
+      + " " + i18nText("status.elpxExportWarningPreviousStyle", "Aviso: en eXeLearning elimina antes el estilo anterior con ese Nombre/Título para poder importarlo."));
+    return;
+  } catch (err) {
+    console.warn("[EdEX] runtime ELPX export failed, falling back to package rewrite:", err);
+  }
+
   const zip = new window.JSZip();
   for (const [path, bytes] of state.elpxFiles.entries()) zip.file(path, bytes);
   const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
-  const original = String(state.elpxOriginalName || "project.elpx").replace(/\.elpx$/i, "");
-  const safe = safeFileName(original) || "project";
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `${safe}-mod.elpx`;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
-    URL.revokeObjectURL(a.href);
-    a.remove();
-  }, 0);
+  downloadBlob(blob, downloadName);
   clearDirty();
+  refreshMetaFields();
   const autoAddedWarning = autoAddedOnExport.length
     ? i18nText("status.withWarning", ` con aviso: se crearon obligatorios: ${autoAddedOnExport.join(", ")}`, { details: autoAddedOnExport.join(", ") })
     : "";
-  const warning = renameCheck.keptOfficialMetadata
-    ? i18nText("status.elpxExportWarningPreviousStyle", " Aviso: en eXeLearning elimina antes el estilo anterior con ese Nombre/Título para poder importarlo.")
-    : "";
+  const warning = i18nText("status.elpxExportWarningPreviousStyle", " Aviso: en eXeLearning elimina antes el estilo anterior con ese Nombre/Título para poder importarlo.");
   setStatus(i18nText("status.elpxExported", `ELPX exportado correctamente (${state.elpxFiles.size} archivos).${warning}${autoAddedWarning}`, { count: state.elpxFiles.size, warning: `${warning}${autoAddedWarning}` }));
 }
 
@@ -7153,6 +7732,15 @@ function setupEvents() {
     input.addEventListener("change", applyPreviewTogglesFromUI);
     input.addEventListener("input", applyPreviewTogglesFromUI);
   }
+  for (const input of els.previewExportTypeInputs) {
+    input.addEventListener("change", applyPreviewSettingsFromUI);
+  }
+  for (const input of els.previewScopeInputs) {
+    input.addEventListener("change", applyPreviewSettingsFromUI);
+  }
+  for (const input of els.previewDeviceInputs) {
+    input.addEventListener("change", applyPreviewSettingsFromUI);
+  }
   // Fallback delegado por si algún toggle se renderiza/reemplaza dinámicamente.
   document.addEventListener("change", (ev) => {
     const target = ev.target;
@@ -7262,8 +7850,13 @@ async function loadDefaultBootElpx() {
   initFooterPrivacyToggle();
   refreshI18nDependentUi();
   window.addEventListener("editor-i18n:changed", refreshI18nDependentUi);
-  state.preview = loadPreviewToggles();
+  // Preview bar controls are intentionally session-only: always boot with the project defaults.
+  state.preview = { ...PREVIEW_DEFAULTS };
   previewToUI(state.preview);
+  state.selectedExportType = "html5";
+  state.selectedScopes = [...PREVIEW_SCOPE_DEFAULTS];
+  state.selectedDevice = PREVIEW_DEVICE_DEFAULT;
+  previewSettingsToUI();
   scheduleAnalyticsLoad();
   try {
     await loadOfficialStylesCatalog();

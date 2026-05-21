@@ -72,6 +72,41 @@ Inclou, entre d'altres:
 
 Convé fer servir `Ajustes` abans que `Archivos` quan hi haja una opció equivalent.
 
+## Barra de previsualització
+
+La barra que hi ha sobre la previsualització té quatre grups de controls. És important distingir quins afecten el CSS i quins són només visuals.
+
+### Vista
+
+Canvia la mida del marc de previsualització (escriptori, tauleta, mòbil). **No modifica el CSS.**
+
+### Format
+
+Selecciona quin tipus d'exportació es mostra a la previsualització (Website, Pàgina única, SCORM). **No modifica el CSS.**
+
+### Àmbit
+
+**Aquest és l'únic grup que modifica el CSS exportat.** Es mostra en color ambre per distingir-lo dels altres.
+
+Defineix a quins formats d'exportació s'apliquen els canvis de CSS:
+
+- **Website** → afegeix selectors .exe-web-site al CSS
+- **Pàgina única** → afegeix selectors .exe-single-page
+- **SCORM** → afegeix selectors .exe-scorm
+- **TinyMCE** → inclou estils per a l'editor intern d'eXeLearning
+
+Convé marcar només els formats que realment faràs servir per no generar CSS innecessari.
+
+### Elements
+
+Mostra o amaga elements dins de la previsualització (botó de cerca, botons de navegació, comptador de pàgines, títols, menú lateral, iDevices). **No modifica el CSS exportat.**
+
+Serveix per comprovar com queda el disseny amb i sense cada element, sense alterar res de l'estil.
+
+### Desfer i refer
+
+Els botons de desfer i refer de la barra permeten revertir o repetir canvis de CSS. S'activen en el moment en què fas qualsevol modificació.
+
 ## Edició per clic
 
 S'activa amb el botó d'inspecció de la previsualització.
@@ -129,7 +164,7 @@ Què has de tenir en compte:
 
 - la conversió és heurística, no una reproducció perfecta
 - alguns estils antics depenien molt del seu propi HTML i JS
-- la comprovació final convé fer-la sempre a eXeLearning
+- la conversió és heurística: convé revisar el resultat a eXeLearning per detectar possibles diferències d'estructura o comportament
 
 ## Exportar ZIP o ELPX
 
@@ -209,7 +244,7 @@ Usa `Archivos` quan:
 
 - en temes amb diversos fitxers `.css` o `.js` a l'arrel, l'editor els conserva, però els ajustos ràpids escriuen sobre `style.css`
 - la conversió d'estils 2.x pot necessitar repàs manual
-- la previsualització ajuda molt, però la comprovació final s'ha de fer a eXeLearning
+- la previsualització usa el runtime real d'eXeLearning, de manera que el resultat és fidel a l'exportació; només cal comprovar a eXeLearning si modifiques `config.xml` o fas servir característiques dependents de l'entorn (SCORM, interactivitats)
 
 ## Recomanacions pràctiques
 

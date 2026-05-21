@@ -72,6 +72,41 @@ It includes, among others:
 
 It is better to use `Settings` before `Files` whenever there is an equivalent option.
 
+## Preview toolbar
+
+The bar above the preview has four groups of controls. It is important to distinguish which ones affect the CSS and which are visual only.
+
+### View
+
+Changes the preview frame size (desktop, tablet, mobile). **Does not modify CSS.**
+
+### Format
+
+Selects which export type is shown in the preview (Website, Single Page, SCORM). **Does not modify CSS.**
+
+### Scope
+
+**This is the only group that modifies the exported CSS.** It is displayed in amber to distinguish it from the others.
+
+Defines which export formats the CSS changes apply to:
+
+- **Website** → adds .exe-web-site selectors to the CSS
+- **Single Page** → adds .exe-single-page selectors
+- **SCORM** → adds .exe-scorm selectors
+- **TinyMCE** → includes styles for the eXeLearning internal editor
+
+It is a good idea to check only the formats you actually intend to use, to avoid generating unnecessary CSS.
+
+### Elements
+
+Shows or hides elements inside the preview (search button, navigation buttons, page counter, titles, sidebar menu, iDevices). **Does not modify the exported CSS.**
+
+Use it to check how the design looks with and without each element, without changing anything in the style.
+
+### Undo and redo
+
+The undo and redo buttons in the toolbar let you revert or repeat CSS changes. They become active as soon as you make any modification.
+
 ## Click editing
 
 It is activated with the inspect button in the preview.
@@ -129,7 +164,7 @@ What you should keep in mind:
 
 - the conversion is heuristic, not a perfect reproduction
 - some old styles relied heavily on their own HTML and JS
-- the final check should always be done in eXeLearning
+- the conversion is heuristic: check the result in eXeLearning to detect possible differences in structure or behaviour
 
 ## Export ZIP or ELPX
 
@@ -209,7 +244,7 @@ Use `Files` when:
 
 - in themes with multiple root `.css` or `.js` files, the editor preserves them, but quick settings write to `style.css`
 - conversion of 2.x styles may need manual review
-- the preview is very useful, but the final check should be done in eXeLearning
+- the preview uses the real eXeLearning runtime, so the result is faithful to the actual export; only check in eXeLearning if you modify `config.xml` or use environment-dependent features (SCORM, interactivities)
 
 ## Practical recommendations
 

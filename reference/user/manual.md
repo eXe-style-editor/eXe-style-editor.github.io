@@ -72,6 +72,41 @@ Incluye, entre otros:
 
 Conviene usar `Ajustes` antes que `Archivos` cuando exista una opción equivalente.
 
+## Barra de previsualización
+
+La barra encima de la previsualización tiene cuatro grupos de controles. Es importante distinguir cuáles afectan al CSS y cuáles son solo visuales.
+
+### Vista
+
+Cambia el tamaño del marco de previsualización (escritorio, tableta, móvil). **No modifica el CSS.**
+
+### Formato
+
+Selecciona qué tipo de exportación se muestra en la previsualización (Website, Página única, SCORM). **No modifica el CSS.**
+
+### Ámbito
+
+**Este es el único grupo que modifica el CSS exportado.** Se muestra en color ámbar para distinguirlo.
+
+Define a qué formatos de exportación se aplican los cambios de CSS:
+
+- **Website** → añade selectores .exe-web-site al CSS
+- **Página única** → añade selectores .exe-single-page
+- **SCORM** → añade selectores .exe-scorm
+- **TinyMCE** → incluye estilos para el editor interno de eXeLearning
+
+Conviene tener marcados solo los formatos que realmente vayas a usar para no generar CSS innecesario.
+
+### Elementos
+
+Muestra u oculta elementos dentro de la previsualización (botón de búsqueda, botones de navegación, contador de páginas, títulos, menú lateral, iDevices). **No modifica el CSS exportado.**
+
+Sirve para comprobar cómo queda el diseño con y sin cada elemento, sin alterar nada del estilo.
+
+### Deshacer y rehacer
+
+Los botones de deshacer y rehacer de la barra permiten revertir o repetir cambios de CSS. Se activan en cuanto realizas cualquier modificación.
+
 ## Edición por clic
 
 Se activa con el botón de inspección de la previsualización.
@@ -129,7 +164,7 @@ Qué debes tener en cuenta:
 
 - la conversión es heurística, no una reproducción perfecta
 - algunos estilos antiguos dependían mucho de HTML y JS propios
-- la revisión final conviene hacerla siempre en eXeLearning
+- la conversión es heurística: conviene revisar el resultado en eXeLearning para detectar posibles diferencias de estructura o comportamiento
 
 ## Exportar ZIP o ELPX
 
@@ -209,7 +244,7 @@ Usa `Archivos` cuando:
 
 - en temas con varios `.css` o varios `.js` en raíz, el editor los conserva, pero los ajustes rápidos escriben sobre `style.css`
 - la conversión de estilos 2.x puede necesitar repasos manuales
-- la previsualización ayuda mucho, pero la comprobación final debe hacerse en eXeLearning
+- la previsualización usa el runtime real de eXeLearning, por lo que el resultado es fiel al de la exportación; conviene comprobar en eXeLearning solo si modificas `config.xml` o usas características dependientes del entorno (SCORM, interactividades)
 
 ## Recomendaciones prácticas
 

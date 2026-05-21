@@ -6,25 +6,56 @@
   };
 
   const TEXT = {
-    es: {
-      title: "Ayuda",
-      kicker: "EdEX",
-      loading: "Cargando ayuda...",
-      error: "No se pudo cargar la ayuda."
-    },
-    en: {
-      title: "Help",
-      kicker: "EdEX",
-      loading: "Loading help...",
-      error: "Could not load help."
-    },
-    ca: {
-      title: "Ajuda",
-      kicker: "EdEX",
-      loading: "Carregant ajuda...",
-      error: "No s'ha pogut carregar l'ajuda."
-    }
+    es: { title: "Ayuda", kicker: "EdEX", loading: "Cargando ayuda...", error: "No se pudo cargar la ayuda." },
+    en: { title: "Help", kicker: "EdEX", loading: "Loading help...", error: "Could not load help." },
+    ca: { title: "Ajuda", kicker: "EdEX", loading: "Carregant ajuda...", error: "No s'ha pogut carregar l'ajuda." }
   };
+
+  const TAB_CONFIG = {
+    es: [
+      { label: "Inicio",     icon: "home" },
+      { label: "Editar",     icon: "edit" },
+      { label: "Exportar",   icon: "download" },
+      { label: "Referencia", icon: "menu_book" }
+    ],
+    en: [
+      { label: "Start",     icon: "home" },
+      { label: "Edit",      icon: "edit" },
+      { label: "Export",    icon: "download" },
+      { label: "Reference", icon: "menu_book" }
+    ],
+    ca: [
+      { label: "Inici",      icon: "home" },
+      { label: "Editar",     icon: "edit" },
+      { label: "Exportar",   icon: "download" },
+      { label: "Referència", icon: "menu_book" }
+    ]
+  };
+
+  // Which H2 section indices (0-based) belong to each tab
+  const TAB_SECTIONS = [
+    [0, 1, 2],       // Inicio:    Para qué sirve · Flujo · Modos de trabajo
+    [3, 4, 5, 6],    // Editar:    Ajustes · Barra preview · Edición clic · Archivos
+    [8, 9, 10],      // Exportar:  Exportar · Información · Favicon
+    [7, 11, 12, 13]  // Referencia: Legacy · Cuándo usar · Limitaciones · Recomendaciones
+  ];
+
+  const SECTION_ICONS = [
+    "info",           // 0  Para qué sirve
+    "route",          // 1  Flujo recomendado
+    "folder_open",    // 2  Modos de trabajo
+    "tune",           // 3  Pestaña Ajustes
+    "preview",        // 4  Barra de previsualización
+    "ads_click",      // 5  Edición por clic
+    "folder",         // 6  Pestaña Archivos
+    "history",        // 7  Importación legacy
+    "download",       // 8  Exportar ZIP o ELPX
+    "badge",          // 9  Información y exportación
+    "web",            // 10 Favicon
+    "help_outline",   // 11 Cuándo usar
+    "warning_amber",  // 12 Limitaciones
+    "lightbulb"       // 13 Recomendaciones
+  ];
 
   function normalizeLang(lang) {
     const clean = String(lang || "").trim().toLowerCase().split("-")[0];
@@ -50,6 +81,8 @@
   function renderInline(text) {
     let html = escapeHtml(text);
     html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+    html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
     return html;
   }
@@ -120,6 +153,84 @@
     return out.join("\n");
   }
 
+  function buildTabs(html, lang) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<body>${html}</body>`, "text/html");
+    const body = doc.body;
+
+    // Split content into sections by H2
+    const sections = [];
+    let current = null;
+
+    for (const node of Array.from(body.childNodes)) {
+      if (node.nodeType === 1 && node.tagName === "H2") {
+        current = { headingNode: node, contentNodes: [] };
+        sections.push(current);
+      } else if (current) {
+        current.contentNodes.push(node);
+      }
+      // Nodes before first H2 (H1, etc.) are skipped — already shown in help-header
+    }
+
+    // Add icon to each H2 heading
+    sections.forEach((section, i) => {
+      const icon = SECTION_ICONS[i] || "circle";
+      const iconSpan = doc.createElement("span");
+      iconSpan.className = "ms";
+      iconSpan.setAttribute("aria-hidden", "true");
+      iconSpan.textContent = icon;
+      section.headingNode.insertBefore(doc.createTextNode(" "), section.headingNode.firstChild);
+      section.headingNode.insertBefore(iconSpan, section.headingNode.firstChild);
+    });
+
+    // Serialize each section to HTML
+    sections.forEach(section => {
+      let sHtml = section.headingNode.outerHTML;
+      section.contentNodes.forEach(n => {
+        sHtml += n.nodeType === 1 ? n.outerHTML : (n.textContent || "");
+      });
+      section.html = sHtml;
+    });
+
+    const tabs = TAB_CONFIG[lang] || TAB_CONFIG.es;
+    let out = "";
+
+    // Tab bar
+    out += '<nav class="help-tabs" role="tablist">';
+    tabs.forEach((tab, i) => {
+      out += `<button class="help-tab${i === 0 ? " help-tab-active" : ""}" role="tab" type="button" aria-selected="${i === 0}" data-tab="${i}">`;
+      out += `<span class="ms" aria-hidden="true">${tab.icon}</span><span>${tab.label}</span>`;
+      out += "</button>";
+    });
+    out += "</nav>";
+
+    // Tab panels
+    tabs.forEach((tab, i) => {
+      out += `<div class="help-panel" role="tabpanel" data-panel="${i}"${i > 0 ? " hidden" : ""}>`;
+      TAB_SECTIONS[i].forEach(sectionIdx => {
+        if (sections[sectionIdx]) out += sections[sectionIdx].html;
+      });
+      out += "</div>";
+    });
+
+    return out;
+  }
+
+  function attachTabHandlers(contentEl) {
+    contentEl.querySelectorAll(".help-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = btn.dataset.tab;
+        contentEl.querySelectorAll(".help-tab").forEach(b => {
+          b.classList.toggle("help-tab-active", b === btn);
+          b.setAttribute("aria-selected", b === btn ? "true" : "false");
+        });
+        contentEl.querySelectorAll(".help-panel").forEach(p => {
+          p.hidden = p.dataset.panel !== idx;
+        });
+      });
+    });
+  }
+
   async function boot() {
     const lang = getLang();
     const text = TEXT[lang] || TEXT.es;
@@ -137,10 +248,11 @@
       if (!response.ok) throw new Error(String(response.status));
       const markdown = await response.text();
       if (!contentEl) return;
-      contentEl.innerHTML = renderMarkdown(markdown);
-      const firstHeading = contentEl.querySelector("h1");
+      contentEl.innerHTML = buildTabs(renderMarkdown(markdown), lang);
+      attachTabHandlers(contentEl);
+      const firstHeading = contentEl.querySelector("h1, h2");
       if (firstHeading instanceof HTMLElement) {
-        document.title = `${firstHeading.textContent || text.title} · EdEX`;
+        document.title = `${text.title} · EdEX`;
       }
     } catch (error) {
       if (!contentEl) return;

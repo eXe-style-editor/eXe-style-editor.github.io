@@ -1,3 +1,25 @@
+@font-face {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 100 700;
+  src: url("../vendor/material-symbols/MaterialSymbolsOutlined.woff2") format("woff2");
+}
+
+.ms {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  vertical-align: -3px;
+}
+
 :root {
   --bg: #f2f5f7;
   --panel: #ffffff;
@@ -125,6 +147,56 @@ body {
   border-radius: 10px;
   background: #fff3f1;
   color: #8a2f22;
+}
+
+/* Tab bar */
+.help-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--line);
+}
+
+.help-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.help-tab .ms {
+  font-size: 1.15em;
+  color: inherit;
+}
+
+.help-tab:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.help-tab-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Section headings icon */
+.help-content h2 .ms {
+  font-size: 1.15em;
+  color: var(--accent);
+  margin-right: 2px;
 }
 
 @media (max-width: 720px) {

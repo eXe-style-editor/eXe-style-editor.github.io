@@ -590,25 +590,141 @@
 
     <main id="previewPanel" class="preview-panel">
       <header class="preview-header">
-        <div class="preview-header-top">
-          <h2 data-i18n="preview.title">Previsualización real del ELPX</h2>
+        <div class="preview-mode-bar" aria-label="Tipo de previsualización y scope CSS">
+          <fieldset class="preview-device-group" aria-label="Tamaño de previsualización" data-i18n-aria-label="preview.device.groupAria">
+            <legend data-i18n="preview.device">Vista</legend>
+            <label>
+              <input type="radio" name="previewDevice" value="desktop" data-preview-device checked
+                aria-label="Escritorio — solo cambia el tamaño de la previsualización, no modifica el CSS"
+                data-i18n-aria-label="preview.device.desktop.title" />
+              <span class="material-symbols-outlined" aria-hidden="true">desktop_windows</span>
+            </label>
+            <label>
+              <input type="radio" name="previewDevice" value="tablet" data-preview-device
+                aria-label="Tablet — solo cambia el tamaño de la previsualización, no modifica el CSS"
+                data-i18n-aria-label="preview.device.tablet.title" />
+              <span class="material-symbols-outlined" aria-hidden="true">tablet_mac</span>
+            </label>
+            <label>
+              <input type="radio" name="previewDevice" value="mobile" data-preview-device
+                aria-label="Móvil — solo cambia el tamaño de la previsualización, no modifica el CSS"
+                data-i18n-aria-label="preview.device.mobile.title" />
+              <span class="material-symbols-outlined" aria-hidden="true">smartphone</span>
+            </label>
+          </fieldset>
+          <fieldset class="preview-segmented" aria-label="Formato de exportación previsualizado" data-i18n-aria-label="preview.exportType.groupAria">
+            <legend data-i18n="preview.exportType">Formato</legend>
+            <label>
+              <input type="radio" name="previewExportType" value="html5" data-export-type checked
+                aria-label="Website — formato de exportación previsualizado, no modifica el CSS"
+                data-i18n-aria-label="preview.exportType.website.title" />
+              <span class="material-symbols-outlined" aria-hidden="true">language</span>
+            </label>
+            <label>
+              <input type="radio" name="previewExportType" value="html5-sp" data-export-type
+                aria-label="Single Page — formato de exportación previsualizado, no modifica el CSS"
+                data-i18n-aria-label="preview.exportType.single.title" />
+              <span class="material-symbols-outlined" aria-hidden="true">article</span>
+            </label>
+            <label>
+              <input type="radio" name="previewExportType" value="scorm12" data-export-type
+                aria-label="SCORM 1.2 — formato de exportación previsualizado, no modifica el CSS"
+                data-i18n-aria-label="preview.exportType.scorm.title" />
+              <span class="material-symbols-outlined" aria-hidden="true">school</span>
+            </label>
+          </fieldset>
+          <fieldset class="preview-scope-group preview-scope-css" aria-label="Formatos a los que se aplican los cambios de CSS" data-i18n-aria-label="preview.scope.groupAria">
+            <legend data-i18n="preview.scope">Ámbito</legend>
+            <label>
+              <input type="checkbox" value="exe-web-site" data-preview-scope checked
+                aria-label="Website — aplicar los cambios de CSS a este formato al exportar (.exe-web-site)"
+                data-i18n-aria-label="preview.scope.website.title" />
+              <span class="material-symbols-outlined" aria-hidden="true">language</span>
+            </label>
+            <label>
+              <input type="checkbox" value="exe-single-page" data-preview-scope checked
+                aria-label="Single Page — aplicar los cambios de CSS a este formato al exportar (.exe-single-page)"
+                data-i18n-aria-label="preview.scope.singlepage.title" />
+              <span class="material-symbols-outlined" aria-hidden="true">article</span>
+            </label>
+            <label>
+              <input type="checkbox" value="exe-scorm" data-preview-scope checked
+                aria-label="SCORM — aplicar los cambios de CSS a este formato al exportar (.exe-scorm)"
+                data-i18n-aria-label="preview.scope.scorm.title" />
+              <span class="material-symbols-outlined" aria-hidden="true">school</span>
+            </label>
+            <label>
+              <input type="checkbox" value="tinymce" data-preview-scope
+                aria-label="TinyMCE — aplicar los cambios de CSS al editor TinyMCE de eXeLearning"
+                data-i18n-aria-label="preview.scope.tinymce.title" />
+              <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
+            </label>
+          </fieldset>
+          <fieldset class="preview-scope-group preview-elements-group" aria-label="Elementos visibles">
+            <legend data-i18n="preview.elements">Elementos</legend>
+            <label>
+              <input type="checkbox" data-preview="showSearch" checked
+                aria-label="Búsqueda — mostrar/ocultar el botón de búsqueda en la previsualización (no modifica el CSS)"
+                data-i18n-aria-label="preview.elements.search.title" />
+              <span data-i18n="preview.elements.search">Búsqueda</span>
+            </label>
+            <label>
+              <input type="checkbox" data-preview="showNavButtons" checked
+                aria-label="Botones nav. — mostrar/ocultar los botones de navegación en la previsualización (no modifica el CSS)"
+                data-i18n-aria-label="preview.elements.navButtons.title" />
+              <span data-i18n="preview.elements.navButtons">Botones nav.</span>
+            </label>
+            <label>
+              <input type="checkbox" data-preview="showPageCounter" checked
+                aria-label="Contador — mostrar/ocultar el contador de páginas en la previsualización (no modifica el CSS)"
+                data-i18n-aria-label="preview.elements.pageCounter.title" />
+              <span data-i18n="preview.elements.pageCounter">Contador</span>
+            </label>
+            <label>
+              <input type="checkbox" data-preview="showPackageTitle" checked
+                aria-label="Título proyecto — mostrar/ocultar el título del proyecto en la previsualización (no modifica el CSS)"
+                data-i18n-aria-label="preview.elements.packageTitle.title" />
+              <span data-i18n="preview.elements.packageTitle">Título proyecto</span>
+            </label>
+            <label>
+              <input type="checkbox" data-preview="showPageTitle" checked
+                aria-label="Título página — mostrar/ocultar el título de la página en la previsualización (no modifica el CSS)"
+                data-i18n-aria-label="preview.elements.pageTitle.title" />
+              <span data-i18n="preview.elements.pageTitle">Título página</span>
+            </label>
+            <label>
+              <input type="checkbox" data-preview="navCollapsed"
+                aria-label="Menú cerrado — simular el menú de navegación lateral cerrado en la previsualización (no modifica el CSS)"
+                data-i18n-aria-label="preview.elements.navCollapsed.title" />
+              <span data-i18n="preview.elements.navCollapsed">Menú cerrado</span>
+            </label>
+            <label>
+              <input type="checkbox" data-preview="collapseIdevices"
+                aria-label="iDevices col. — colapsar el contenido de los iDevices en la previsualización (no modifica el CSS)"
+                data-i18n-aria-label="preview.elements.collapseIdevices.title" />
+              <span data-i18n="preview.elements.collapseIdevices">iDevices col.</span>
+            </label>
+          </fieldset>
+          <p id="previewScopeStatus" class="status-inline" aria-live="polite" hidden></p>
           <div class="preview-toolbar" aria-label="Acciones rápidas" data-i18n-aria-label="preview.quickActions">
-            <button id="undoBtn" class="icon-btn" type="button" title="Deshacer último cambio" data-i18n-title="preview.undoTitle" disabled>
+            <button id="undoBtn" class="icon-btn" type="button" title="Deshacer el último cambio de CSS" data-i18n-title="preview.undoTitle" disabled>
               <span class="material-symbols-outlined" aria-hidden="true">undo</span>
-              <span class="sr-only" data-i18n="preview.undoTitle">Deshacer último cambio</span>
+              <span class="sr-only" data-i18n="preview.undoTitle">Deshacer el último cambio de CSS</span>
             </button>
-            <button id="redoBtn" class="icon-btn" type="button" title="Rehacer cambio deshecho" data-i18n-title="preview.redoTitle" disabled>
+            <button id="redoBtn" class="icon-btn" type="button" title="Rehacer el cambio de CSS deshecho" data-i18n-title="preview.redoTitle" disabled>
               <span class="material-symbols-outlined" aria-hidden="true">redo</span>
-              <span class="sr-only" data-i18n="preview.redoTitle">Rehacer último cambio</span>
+              <span class="sr-only" data-i18n="preview.redoTitle">Rehacer el cambio de CSS deshecho</span>
             </button>
-            <button id="previewInspectBtn" class="icon-btn" type="button" aria-pressed="false" title="Modo edición por clic" data-i18n-title="preview.inspectTitle">
+            <button id="previewInspectBtn" class="icon-btn" type="button" aria-pressed="false" title="Hacer clic en un elemento de la previsualización para editar su CSS directamente" data-i18n-title="preview.inspectTitle">
               <span class="material-symbols-outlined" aria-hidden="true">ads_click</span>
-              <span class="sr-only" data-i18n="preview.inspectActivate">Activar modo edición por clic</span>
+              <span class="sr-only" data-i18n="preview.inspectActivate">Activar edición por clic en elemento</span>
             </button>
           </div>
         </div>
       </header>
-      <iframe id="previewFrame" title="Previsualización eXe" data-i18n-title="preview.iframeTitle" src="about:blank" sandbox="allow-same-origin allow-scripts"></iframe>
+      <div id="previewViewport" class="preview-viewport" data-device="desktop">
+        <iframe id="previewFrame" title="Previsualización eXe" data-i18n-title="preview.iframeTitle" src="about:blank" sandbox="allow-same-origin allow-scripts"></iframe>
+      </div>
       <div id="busyOverlay" class="busy-overlay" hidden>
         <div class="busy-card" role="status" aria-live="polite" aria-busy="true">
           <span class="busy-spinner" aria-hidden="true"></span>
@@ -736,7 +852,7 @@
   </div>
   <footer class="app-footer">
     <p class="app-footer-line app-footer-line--secondary">
-      <span>v 1.1.1 · © <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">AGPLv3</a> · <a href="https://github.com/eXe-style-editor/eXe-style-editor.github.io" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">GitHub</a></span>
+      <span>v 2.0.0 ·© <a href="https://bilateria.org" target="_blank" rel="noopener noreferrer">Juan José de Haro</a> · <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" data-i18n="footer.license">AGPLv3</a> · <a href="https://github.com/eXe-style-editor/eXe-style-editor.github.io" target="_blank" rel="noopener noreferrer" data-i18n="footer.repo">GitHub</a></span>
       <span class="app-footer-sep">·</span>
       <a href="https://github.com/eXe-style-editor/eXe-style-editor.github.io/issues" target="_blank" rel="noopener noreferrer" data-i18n="footer.issues">Problemas y sugerencias</a>
       <span class="app-footer-sep">·</span>

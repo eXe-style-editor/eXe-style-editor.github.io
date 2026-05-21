@@ -244,6 +244,106 @@ body {
   gap: 6px;
 }
 
+.preview-mode-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.preview-mode-bar .preview-toolbar {
+  margin-left: auto;
+}
+
+.preview-segmented,
+.preview-scope-group,
+.preview-elements-group,
+.preview-device-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.preview-segmented legend,
+.preview-scope-group legend,
+.preview-elements-group legend,
+.preview-device-group legend {
+  margin-right: 4px;
+  color: #526071;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.preview-segmented label,
+.preview-scope-group label,
+.preview-elements-group label,
+.preview-device-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: #263445;
+  font-size: 0.82rem;
+  line-height: 1.1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.preview-segmented input,
+.preview-scope-group input,
+.preview-elements-group input,
+.preview-device-group input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.preview-segmented label:has(input:checked),
+.preview-scope-group label:has(input:checked),
+.preview-elements-group label:has(input:checked),
+.preview-device-group label:has(input:checked) {
+  border-color: color-mix(in srgb, var(--action) 50%, #8aa0b2);
+  background: #e6f6f6;
+  color: var(--action-dark);
+}
+
+.preview-device-group .material-symbols-outlined,
+.preview-segmented .material-symbols-outlined,
+.preview-scope-group .material-symbols-outlined {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Ámbito CSS: único grupo que modifica el CSS exportado */
+.preview-scope-css legend {
+  color: #92400e;
+}
+.preview-scope-css label {
+  border-color: #d97706;
+  background: #fffbeb;
+  color: #92400e;
+}
+.preview-scope-css label:has(input:checked) {
+  border-color: #b45309;
+  background: #fde68a;
+  color: #78350f;
+}
+
+.preview-mode-bar .status-inline {
+  margin: 0;
+  flex: 1 1 220px;
+  min-width: min(220px, 100%);
+}
+
 .icon-btn {
   width: 34px;
   height: 34px;
@@ -1235,12 +1335,44 @@ textarea:focus-visible {
   gap: 8px;
 }
 
+.preview-viewport {
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 0;
+  background: #d8dee7;
+}
+
 #previewFrame {
   width: 100%;
   height: 100%;
   border: 0;
   border-radius: 0 0 10px 10px;
   background: #fff;
+}
+
+.preview-viewport[data-device="tablet"],
+.preview-viewport[data-device="mobile"] {
+  padding: 14px;
+  align-items: flex-start;
+}
+
+.preview-viewport[data-device="tablet"] #previewFrame,
+.preview-viewport[data-device="mobile"] #previewFrame {
+  min-height: 100%;
+  border: 1px solid #aeb8c6;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgb(15 23 42 / 0.16);
+}
+
+.preview-viewport[data-device="tablet"] #previewFrame {
+  width: min(768px, 100%);
+}
+
+.preview-viewport[data-device="mobile"] #previewFrame {
+  width: min(390px, 100%);
 }
 
 

@@ -7,6 +7,11 @@ const PREVIEW_DEFAULTS = {
   showPageTitle: true,
   collapseIdevices: false
 };
+const EXPORT_TYPES = {
+  html5: "exe-web-site",
+  "html5-sp": "exe-single-page",
+  scorm12: "exe-scorm"
+};
 
 const PREVIEW_PAGE_ID = "20260101000000SIMULADO";
 let modernPageIndex = 0;
@@ -64,6 +69,7 @@ function previewPayload(rawPayload) {
     styleJsText: String(payload.styleJsText || ""),
     layoutMode: String(payload.layoutMode || "modern"),
     legacyImport: Boolean(payload.legacyImport),
+    exportType: Object.prototype.hasOwnProperty.call(EXPORT_TYPES, payload.exportType) ? payload.exportType : "html5",
     preview: { ...PREVIEW_DEFAULTS, ...(payload.preview || {}) },
     iconUrls: payload.iconUrls && typeof payload.iconUrls === "object" ? payload.iconUrls : {},
     screenshotUrl: String(payload.screenshotUrl || ""),
@@ -452,13 +458,15 @@ function applyModernInteractivity(payload) {
 function previewMarkupModern(payload) {
   const p = payload.preview;
   const pages = buildModernPages(payload);
-  const bodyClasses = ["exe-export", "exe-web-site", "js", "preview-sim"];
-  if (p.navCollapsed) bodyClasses.push("siteNav-off");
-  if (p.showSearch) bodyClasses.push("exe-search-on");
+  const exportType = payload.exportType || "html5";
+  const isWebsite = exportType === "html5";
+  const bodyClasses = ["exe-export", EXPORT_TYPES[exportType] || "exe-web-site", "js", "preview-sim"];
+  if (isWebsite && p.navCollapsed) bodyClasses.push("siteNav-off");
+  if (isWebsite && p.showSearch) bodyClasses.push("exe-search-on");
   if (p.collapseIdevices) bodyClasses.push("preview-boxes-collapsed");
   if (payload.legacyImport) bodyClasses.push("legacy-import-preview");
 
-  const searchHtml = p.showSearch ? `
+  const searchHtml = isWebsite && p.showSearch ? `
       <div id="exe-client-search" data-block-order-string="Caja %e" data-no-results-string="Sin resultados.">
         <form id="exe-client-search-form" action="#" method="GET">
           <p>
@@ -470,7 +478,7 @@ function previewMarkupModern(payload) {
         </form>
         <div id="exe-client-search-results"><div id="exe-client-search-results-list"></div></div>
       </div>` : "";
-  const pageCounterHtml = p.showPageCounter
+  const pageCounterHtml = isWebsite && p.showPageCounter
     ? `<p class="page-counter"><span class="page-counter-label">Página </span><span class="page-counter-content"><strong class="page-counter-current-page">1</strong><span class="page-counter-sep">/</span><strong class="page-counter-total">${pages.length}</strong></span></p>`
     : "";
   const navLinksHtml = pages
@@ -481,23 +489,23 @@ function previewMarkupModern(payload) {
     const legacyTopHeaderHtml = p.showPackageTitle
       ? `<header id="header" class="main-header package-header"><h1 id="headerContent" class="package-title">${escapeHtml(payload.packageTitle)}</h1></header>`
       : "<div id=\"emptyHeader\" class=\"main-header package-header\"></div>";
-    const legacyControlsHtml = `
+    const legacyControlsHtml = isWebsite ? `
       <div class="legacy-preview-controls">
         ${searchHtml}
         ${pageCounterHtml}
         ${p.showNavButtons ? "<div class=\"legacy-nav-buttons preview-nav-buttons\"><a href=\"#\" data-preview-nav=\"prev\" title=\"Anterior\" class=\"preview-nav-btn preview-nav-btn-prev\"><span>Anterior</span></a><a href=\"#\" data-preview-nav=\"next\" title=\"Siguiente\" class=\"preview-nav-btn preview-nav-btn-next\"><span>Siguiente</span></a></div>" : ""}
-      </div>`;
+      </div>` : "";
     const html = `
   <div id="content" class="exe-content exe-export">
     ${legacyTopHeaderHtml}
-    <button type="button" id="siteNavToggler" class="toggler" title="Menú"><span class="sr-av">Menú</span></button>
-    <button type="button" id="searchBarTogger" class="toggler" title="Buscar"><span class="sr-av">Buscar</span></button>
-    ${p.navCollapsed ? "" : `
+    ${isWebsite ? `<button type="button" id="siteNavToggler" class="toggler" title="Menú"><span class="sr-av">Menú</span></button>` : ""}
+    ${isWebsite && p.showSearch ? `<button type="button" id="searchBarTogger" class="toggler" title="Buscar"><span class="sr-av">Buscar</span></button>` : ""}
+    ${isWebsite && !p.navCollapsed ? `
     <nav id="siteNav" aria-label="Navegación">
       <ul>
         ${navLinksHtml}
       </ul>
-    </nav>`}
+    </nav>` : ""}
 
     <main id="${PREVIEW_PAGE_ID}" class="page">
       <div id="main-wrapper"><div id="main">
@@ -523,13 +531,13 @@ function previewMarkupModern(payload) {
 
   const html = `
   <div class="exe-content exe-export">
-    <button type="button" id="siteNavToggler" class="toggler" title="Menú"><span class="sr-av">Menú</span></button>
-    <button type="button" id="searchBarTogger" class="toggler" title="Buscar"><span class="sr-av">Buscar</span></button>
-    <nav id="siteNav" aria-label="Navegación">
+    ${isWebsite ? `<button type="button" id="siteNavToggler" class="toggler" title="Menú"><span class="sr-av">Menú</span></button>` : ""}
+    ${isWebsite && p.showSearch ? `<button type="button" id="searchBarTogger" class="toggler" title="Buscar"><span class="sr-av">Buscar</span></button>` : ""}
+    ${isWebsite ? `<nav id="siteNav" aria-label="Navegación">
       <ul>
         ${navLinksHtml}
       </ul>
-    </nav>
+    </nav>` : ""}
 
     <main id="${PREVIEW_PAGE_ID}" class="page">
       ${searchHtml}${headerHtml}
@@ -539,7 +547,7 @@ function previewMarkupModern(payload) {
       </div>
     </main>
 
-    ${p.showNavButtons ? "<div class=\"nav-buttons\"><a href=\"#\" id=\"previewNavPrev\" data-preview-nav=\"prev\" title=\"Anterior\" class=\"nav-button nav-button-left\"><span>Anterior</span></a><a href=\"#\" id=\"previewNavNext\" data-preview-nav=\"next\" title=\"Siguiente\" class=\"nav-button nav-button-right\"><span>Siguiente</span></a></div>" : ""}
+    ${isWebsite && p.showNavButtons ? "<div class=\"nav-buttons\"><a href=\"#\" id=\"previewNavPrev\" data-preview-nav=\"prev\" title=\"Anterior\" class=\"nav-button nav-button-left\"><span>Anterior</span></a><a href=\"#\" id=\"previewNavNext\" data-preview-nav=\"next\" title=\"Siguiente\" class=\"nav-button nav-button-right\"><span>Siguiente</span></a></div>" : ""}
     <footer id="siteFooter"><div id="siteFooterContent">Pie de página simulado</div></footer>
   </div>`;
 
@@ -562,8 +570,10 @@ function legacyPaginationMarkup(preview) {
 
 function previewMarkupLegacy(payload) {
   const p = payload.preview;
-  const bodyClasses = ["exe-export", "exe-web-site", "js", "preview-sim", "legacy-preview"];
-  if (p.navCollapsed) bodyClasses.push("no-nav");
+  const exportType = payload.exportType || "html5";
+  const isWebsite = exportType === "html5";
+  const bodyClasses = ["exe-export", EXPORT_TYPES[exportType] || "exe-web-site", "js", "preview-sim", "legacy-preview"];
+  if (isWebsite && p.navCollapsed) bodyClasses.push("no-nav");
   if (p.collapseIdevices) bodyClasses.push("preview-boxes-collapsed");
 
   const packageTitle = p.showPackageTitle ? escapeHtml(payload.packageTitle) : "";
@@ -574,18 +584,18 @@ function previewMarkupLegacy(payload) {
 
   const html = `
   <div id="content" class="exe-content legacy-content">
-    ${p.showNavButtons || p.showPageCounter ? `<div id="topPagination">${legacyPaginationMarkup(p)}</div>` : ""}
+    ${isWebsite && (p.showNavButtons || p.showPageCounter) ? `<div id="topPagination">${legacyPaginationMarkup(p)}</div>` : ""}
     ${p.showPackageTitle ? `<div id="header"><h1 id="headerContent" class="package-title">${packageTitle}</h1></div>` : "<div id=\"emptyHeader\"></div>"}
-    ${p.navCollapsed ? "" : `
+    ${isWebsite && !p.navCollapsed ? `
     <div id="siteNav" aria-label="Navegación">
       <ul>
         <li><a class="active main-node" href="#">Inicio</a></li>
         <li><a href="#">Tema</a></li>
       </ul>
-    </div>`}
-    <p id="header-options">
+    </div>` : ""}
+    ${isWebsite ? `<p id="header-options">
       <a href="#" id="toggle-nav" title="Menú"><span>Menú</span></a>
-    </p>
+    </p>` : ""}
     <div id="main-wrapper">
       <div id="main" class="page-content">
         ${p.showSearch ? "<form id=\"exe-client-search-form\" action=\"#\"><input id=\"exe-client-search-text\" type=\"search\" placeholder=\"Buscar en este recurso\" /><input id=\"exe-client-search-submit\" type=\"submit\" value=\"Buscar\" /></form>" : ""}
@@ -597,7 +607,7 @@ function previewMarkupLegacy(payload) {
 
       </div>
     </div>
-    ${p.showNavButtons || p.showPageCounter ? `<div id="bottomPagination">${legacyPaginationMarkup(p)}</div>` : ""}
+    ${isWebsite && (p.showNavButtons || p.showPageCounter) ? `<div id="bottomPagination">${legacyPaginationMarkup(p)}</div>` : ""}
     <div id="siteFooter">Pie de página simulado</div>
     <div class="legacy-extra-sample">
       <div class="iDevice_wrapper activityIdevice em_iDevice em_iDevice_activity box" id="id1">

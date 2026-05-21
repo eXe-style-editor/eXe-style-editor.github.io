@@ -1,38 +1,29 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+EXE_REPO_URL="https://github.com/exelearning/exelearning"
+
 usage() {
   cat <<'EOF'
-Usage: scripts/sync-exe-bundles.sh [--source PATH] [--skip-build]
+Usage: scripts/sync-exe-bundles.sh [--skip-build]
 
-Copies the static eXeLearning runtime bundles and official theme
-templates needed by EdEX.
+Clones the official eXeLearning repo from GitHub (shallow) and copies
+the static runtime bundles and official theme templates needed by EdEX.
 
 Options:
-  --source PATH   eXeLearning checkout to sync from.
-  --skip-build    Do not run bun bundle tasks before copying.
+  --skip-build    Do not rebuild importers/exporters bundles (bun not required).
+                  Bundles already present in the clone are copied as-is.
+                  Use when the bundle JS has not changed upstream.
   -h, --help      Show this help.
-
-Environment:
-  EXE_SOURCE_REPO  Alternative source checkout path.
 EOF
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SOURCE_REPO="${EXE_SOURCE_REPO:-/home/jjdeharo/Documentos/github/OTROS_REPOSITORIOS/exelearning}"
 RUN_BUILD=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --source)
-      SOURCE_REPO="${2:-}"
-      if [[ -z "$SOURCE_REPO" ]]; then
-        echo "Missing value for --source" >&2
-        exit 2
-      fi
-      shift 2
-      ;;
     --skip-build)
       RUN_BUILD=0
       shift
@@ -49,32 +40,36 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ ! -d "$SOURCE_REPO/.git" ]]; then
-  echo "eXeLearning source repo not found: $SOURCE_REPO" >&2
-  exit 1
-fi
+WORK_DIR="$(mktemp -d)"
+SOURCE_REPO="$WORK_DIR/exelearning"
+trap 'rm -rf "$WORK_DIR"' EXIT
 
-if [[ ! -f "$SOURCE_REPO/public/app/yjs/importers.bundle.js" ]]; then
-  echo "Missing importers bundle in $SOURCE_REPO/public/app/yjs" >&2
-  exit 1
-fi
-
-if [[ ! -f "$SOURCE_REPO/public/app/yjs/exporters.bundle.js" ]]; then
-  echo "Missing exporters bundle in $SOURCE_REPO/public/app/yjs" >&2
-  exit 1
-fi
+echo "Cloning $EXE_REPO_URL (depth 1)..."
+git clone --depth 1 "$EXE_REPO_URL" "$SOURCE_REPO"
 
 if [[ "$RUN_BUILD" -eq 1 ]]; then
   if ! command -v bun >/dev/null 2>&1; then
-    echo "bun is required to rebuild bundles. Re-run with --skip-build to copy existing files." >&2
+    echo "bun is required to rebuild bundles. Re-run with --skip-build to skip." >&2
     exit 1
   fi
+  echo "Building bundles..."
   (
     cd "$SOURCE_REPO"
+    bun install --frozen-lockfile
     bun run bundle:importers
     bun run bundle:exporters
     bun run bundle:resources
   )
+fi
+
+if [[ ! -f "$SOURCE_REPO/public/app/yjs/importers.bundle.js" ]]; then
+  echo "Missing importers.bundle.js — run without --skip-build to rebuild." >&2
+  exit 1
+fi
+
+if [[ ! -f "$SOURCE_REPO/public/app/yjs/exporters.bundle.js" ]]; then
+  echo "Missing exporters.bundle.js — run without --skip-build to rebuild." >&2
+  exit 1
 fi
 
 RUNTIME_DIR="$REPO_ROOT/app/exe-runtime"
@@ -128,14 +123,13 @@ else
 fi
 
 SOURCE_COMMIT="$(git -C "$SOURCE_REPO" rev-parse HEAD)"
-SOURCE_BRANCH="$(git -C "$SOURCE_REPO" branch --show-current || true)"
 SOURCE_VERSION="$(node -e "const p=require(process.argv[1]); console.log(p.version || '')" "$SOURCE_REPO/package.json" 2>/dev/null || true)"
 SYNCED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 {
   printf '{\n'
-  printf '  "sourceRepo": "%s",\n' "$SOURCE_REPO"
-  printf '  "sourceBranch": "%s",\n' "$SOURCE_BRANCH"
+  printf '  "sourceRepo": "%s",\n' "$EXE_REPO_URL"
+  printf '  "sourceBranch": "main",\n'
   printf '  "sourceCommit": "%s",\n' "$SOURCE_COMMIT"
   printf '  "sourceVersion": "%s",\n' "$SOURCE_VERSION"
   printf '  "syncedAt": "%s",\n' "$SYNCED_AT"
@@ -223,4 +217,4 @@ NODE
 echo "Synced eXeLearning runtime into $RUNTIME_DIR"
 echo "Synced official theme templates into $OFFICIAL_THEMES_DIR"
 echo "Regenerated $OFFICIAL_STYLES_JSON"
-echo "Source: $SOURCE_REPO@$SOURCE_COMMIT"
+echo "Source: $EXE_REPO_URL@$SOURCE_COMMIT"

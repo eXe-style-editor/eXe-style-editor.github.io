@@ -7867,6 +7867,7 @@ function setupEvents() {
 }
 
 function refreshI18nDependentUi() {
+  loadRuntimeSourceBadge();
   updateHelpLink();
   applyControlTooltips();
   setDetachedEditorButtonState();
@@ -7934,7 +7935,11 @@ function getRuntimeSourceBadgeInfo(manifest) {
     const releaseText = releaseTag || `v${version}`;
     return {
       text: `eXe ${version}`,
-      title: `Bundles sincronizados desde la release ${releaseText}`
+      title: i18nText(
+        "header.runtimeSource.releaseTitle",
+        `Bundles synchronized from release ${releaseText}`,
+        { release: releaseText }
+      )
     };
   }
 
@@ -7944,8 +7949,16 @@ function getRuntimeSourceBadgeInfo(manifest) {
     return {
       text: `eXe ${branch}`,
       title: commitText
-        ? `Bundles sincronizados desde ${branch} @ ${commitText}`
-        : `Bundles sincronizados desde ${branch}`
+        ? i18nText(
+            "header.runtimeSource.branchCommitTitle",
+            `Bundles synchronized from ${branch} @ ${commitText}`,
+            { branch, commit: commitText }
+          )
+        : i18nText(
+            "header.runtimeSource.branchTitle",
+            `Bundles synchronized from ${branch}`,
+            { branch }
+          )
     };
   }
 

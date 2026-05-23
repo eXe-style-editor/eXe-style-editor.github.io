@@ -514,6 +514,22 @@ body {
   gap: 10px;
 }
 
+.runtime-source-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  padding: 0.12rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--action) 22%, var(--line) 78%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--action) 10%, #ffffff 90%);
+  box-shadow: 0 1px 2px rgb(16 114 117 / 0.08);
+  color: var(--action-dark);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .app-title-logo {
   width: 28px;
   height: 28px;

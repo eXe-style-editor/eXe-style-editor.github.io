@@ -388,7 +388,7 @@ body.exe-export.exe-epub .exe-content {
 #sidebar-nav {
     position: fixed;
 }
-.siteNav-off #siteNav {
+body.siteNav-off #siteNav {
     display: none;
 }
 
@@ -404,8 +404,8 @@ body.exe-export.exe-epub .exe-content {
     padding-bottom: 40px;
     transition: padding 0.3s ease;
 }
-.siteNav-off main.page,
-.siteNav-off #siteFooter {
+body.siteNav-off main.page,
+body.siteNav-off #siteFooter {
     padding-left: 0;
 }
 #siteNav ul,
@@ -414,12 +414,9 @@ body.exe-export.exe-epub .exe-content {
     padding: 0;
     list-style: none;
 }
+
 #siteNav li {
     margin-bottom: 4px;
-}
-
-#siteNav li > ul {
-    margin-top: 4px;
 }
 
 #siteNav a {
@@ -494,42 +491,28 @@ body.exe-export.exe-epub .exe-content {
 }
 
 .daddy {
-    position: relative;
-    padding-right: 48px !important;
-    background-color: #fff;
+    background: #fff url(img/arrow_down.svg) no-repeat right 16px center / 22px !important;
 }
-.active .active.daddy { background-color: #ffd940; }
-.active .daddy { background-color: #fff1bb; }
-#siteNav .current-page-parent > .daddy { background-color: #fff1bb; }
-.current-page-parent .daddy { background-color: #fff1bb; }
-.daddy:hover,
-.active.daddy:hover { background-color: #ffd940; }
-
-/* Submenu toggle button (chevron) — dark on light backgrounds.
-   Uses background-image (not CSS mask) so the icon also works under file://
-   without running into CORS restrictions on mask resources. */
-#siteNav a.daddy > button {
-    position: absolute;
-    top: 50%;
-    right: 8px;
-    transform: translateY(-50%);
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: 0;
-    background-color: transparent;
-    background-image: url(img/arrow_down.svg);
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 22px;
-    transition: transform 0.2s ease;
-    cursor: pointer;
+.active .active.daddy {
+    background: #ffd940 url(img/arrow.svg) no-repeat right 16px center / 22px !important;
 }
-#siteNav a.daddy > button.closed-ul {
-    transform: translateY(-50%) rotate(0);
+.active .daddy {
+    background: #fff1bb url(img/arrow_down.svg) no-repeat right 16px center /
+        22px !important;
 }
-#siteNav a.daddy > button.open-ul {
-    transform: translateY(-50%) rotate(180deg);
+#siteNav .current-page-parent > .daddy {
+    background: #fff1bb url(img/arrow.svg) no-repeat right 16px center / 22px !important;
+}
+.current-page-parent .daddy {
+    background: #fff1bb url(img/arrow_down.svg) no-repeat right 16px center /
+        22px !important;
+}
+.daddy:hover {
+    background: #ffd940 url(img/arrow_down.svg) no-repeat right 16px center /
+        22px !important;
+}
+.active.daddy:hover {
+    background: #ffd940 url(img/arrow.svg) no-repeat right 16px center / 22px !important;
 }
 
 /* pagination */
@@ -574,18 +557,24 @@ button.toggler {
 button#siteNavToggler {
     left: 10px;
     top: 130px;
-    padding: 8px 8px 8px 19px;
-    width: 100px;
+    background: #fff url(img/menu_open.svg) no-repeat 12px / 32px;
+    width: 40px;
     height: 40px;
     border-radius: 8px;
     box-sizing: content-box;
-    background: #fff url(img/menu_open.svg) no-repeat 22px / 32px;
+    padding: 8px;
 }
 #siteNavToggler:hover {
     background-color: #f4f4f4;
 }
+button#siteNavToggler span {
+    display: none;
+}
+.siteNav-off button#siteNavToggler span {
+    display: inline;
+}
 
-.siteNav-off button#siteNavToggler {
+body.siteNav-off button#siteNavToggler {
     left: 0;
     top: 130px;
     padding: 8px 8px 8px 19px;
@@ -593,7 +582,7 @@ button#siteNavToggler {
     border-radius: 0 8px 8px 0;
     background: #282573 url(img/menu_closed.svg) no-repeat 22px / 32px;
 }
-.siteNav-off button#siteNavToggler:hover {
+body.siteNav-off button#siteNavToggler:hover {
     background-color: #191748;
 }
 
@@ -601,12 +590,9 @@ button#siteNavToggler {
     visibility: visible;
     position: static;
     padding-left: 24px;
-    color: #282573;
+    color: #fff;
     font-size: 1rem;
     font-weight: 600;
-}
-.siteNav-off #siteNavToggler .sr-av {
-    color: #fff;
 }
 
 .nav-buttons a:hover,
@@ -834,7 +820,7 @@ button#searchBarTogger {
     height: 48px;
     display: none;
 }
-.siteNav-off button#searchBarTogger {
+body.siteNav-off button#searchBarTogger {
     top: 220px;
     left: 0px;
     padding-left: 50px;
@@ -939,7 +925,7 @@ button#searchBarTogger {
     .siteNav-off button#siteNavToggler span {
         display: none;
     }
-    .siteNav-off button#siteNavToggler {
+    body.siteNav-off button#siteNavToggler {
         width: 56px;
     }
 }
@@ -1059,7 +1045,7 @@ button#searchBarTogger {
         padding-top: 0;
     }
 
-    .siteNav-off button#siteNavToggler {
+    body.siteNav-off button#siteNavToggler {
         right: 16px;
         left: 16px;
         top: 120px;
@@ -1071,7 +1057,7 @@ button#searchBarTogger {
         font-weight: 700;
     }
 
-    .siteNav-off button#siteNavToggler span {
+    body.siteNav-off button#siteNavToggler span {
         color: #fff;
         text-align: left;
         padding-left: 40px;
@@ -1080,12 +1066,12 @@ button#searchBarTogger {
         display: block;
     }
 
-    .siteNav-off button#siteNavToggler:hover {
+    body.siteNav-off button#siteNavToggler:hover {
         background-color: #191748;
     }
 
-    .siteNav-off main.page,
-    .siteNav-off #siteFooter {
+    body.siteNav-off main.page,
+    body.siteNav-off #siteFooter {
         padding: 0;
     }
 
@@ -1108,7 +1094,7 @@ button#searchBarTogger {
     .exe-search-on button#siteNavToggler {
         right: 100px;
     }
-    .siteNav-off button#searchBarTogger,
+    body.siteNav-off button#searchBarTogger,
     body button#searchBarTogger {
         left: auto;
         right: 20px;
@@ -1178,10 +1164,10 @@ button#searchBarTogger {
     }
     button#siteNavToggler span,
     button#siteNavToggler .sr-av,
-    .siteNav-off button#siteNavToggler span {
+    body.siteNav-off button#siteNavToggler span {
         padding-left: 24px;
     }
-    .siteNav-off button#siteNavToggler {
+    body.siteNav-off button#siteNavToggler {
         background: #282573 url(img/menu_closed.svg) no-repeat 12px / 24px;
     }
     .box-title {

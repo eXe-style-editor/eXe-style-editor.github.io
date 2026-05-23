@@ -1,108 +1,102 @@
 {
   "buildVersion": "v0.0.0-alpha",
-  "builtAt": "2026-05-21T08:49:21.435Z",
+  "builtAt": "2026-04-30T07:26:28.082Z",
   "themes": {
-    "flux": {
-      "files": 76,
-      "size": 358059,
-      "hash": "452688c9b967e3917636e75aa80ddf69d6e06c26c356e0c8a12742d4c5475bd5"
-    },
     "nova": {
       "files": 74,
-      "size": 142019,
-      "hash": "1dcf1296edb4f4b0760a4fce1e2eb7ad13f7147f015d8bf8ff59a2d0f2048559"
-    },
-    "base": {
-      "files": 56,
-      "size": 126503,
-      "hash": "d19cf63170db59465cea5fd5d6f7bd98afed5f2d09249db1a8ef3e62c97b52a3"
+      "size": 140993,
+      "hash": "9e1231a006ee7a1b425eda2bab0d4564b1af0c91b1d757e01ff63fa8971818d0"
     },
     "zen": {
       "files": 80,
       "size": 1173572,
-      "hash": "e5b1c2268fb3c42d49b9808773daadee494505d37739774c86ac0eb736d3f253"
-    },
-    "neo": {
-      "files": 87,
-      "size": 1167300,
-      "hash": "a9a5659167eebd0c7a4a2d6c7f1ee4a50651e8844f611523c72c1eca1183e184"
+      "hash": "c416f0ee901d78535fd177488cead4a546e33823d98b4e01e6ee033eb6d4d44e"
     },
     "universal": {
       "files": 93,
       "size": 147937,
-      "hash": "f59b447d4e900d012a282c007cee1cbabc3b98fafca92e9f7a65c52a8b209c62"
+      "hash": "033e74d8e7e6585846a134c3f62231cceef48e6fa204708936ac15f654a1e2e7"
+    },
+    "base": {
+      "files": 56,
+      "size": 126503,
+      "hash": "90a1dfa9a7679558aa5daeffdb6b0d2dccdad40b1b1e1ec9e8763b8340159228"
+    },
+    "flux": {
+      "files": 75,
+      "size": 356616,
+      "hash": "fbdef8c9c57949d0cf827374b6cf196f79a09110c46ea92cf7826b9af65a5b3e"
+    },
+    "neo": {
+      "files": 87,
+      "size": 1167300,
+      "hash": "08d2ce78b345b0040d868d2319efdd151b1053604717ec4aeb534dd747fc191e"
     }
   },
   "idevices": {
-    "relate": 22,
-    "text": 5,
-    "sort": 26,
-    "checklist": 10,
-    "complete": 17,
-    "guess": 31,
-    "geogebra-activity": 7,
-    "mathematicaloperations": 18,
-    "crossword": 23,
-    "lomloe": 3,
-    "three-d-viewer": 10,
-    "image-gallery": 7,
-    "trueorfalse": 19,
-    "udl-content": 9,
-    "identify": 24,
-    "trivial": 42,
-    "interactive-video": 9,
-    "flipcards": 22,
-    "select-media-files": 25,
-    "beforeafter": 18,
-    "3dmol": 29,
-    "form": 13,
-    "padlock": 13,
-    "hidden-image": 15,
-    "periodic-table": 14,
     "word-search": 25,
-    "quick-questions-video": 27,
+    "beforeafter": 18,
+    "text": 5,
+    "quick-questions": 26,
+    "classify": 22,
+    "dragdrop": 18,
+    "udl-content": 9,
+    "interactive-video": 9,
+    "magnifier": 8,
+    "download-source-file": 5,
     "puzzle": 26,
     "digcompedu": 4,
-    "markdown-text": 4,
-    "classify": 22,
-    "external-website": 3,
-    "map": 158,
-    "example": 4,
-    "dragdrop": 18,
-    "magnifier": 8,
-    "progress-report": 11,
-    "discover": 26,
-    "slide": 4,
-    "download-source-file": 5,
-    "scrambled-list": 14,
+    "form": 13,
     "mathproblems": 18,
+    "hidden-image": 15,
+    "crossword": 23,
+    "progress-report": 11,
+    "geogebra-activity": 7,
+    "identify": 24,
     "challenge": 62,
-    "casestudy": 5,
+    "external-website": 3,
+    "padlock": 13,
+    "mathematicaloperations": 18,
+    "relate": 22,
+    "complete": 17,
     "quick-questions-multiple-choice": 28,
-    "electrical-circuits": 168,
     "az-quiz-game": 31,
+    "guess": 31,
+    "trueorfalse": 19,
+    "map": 158,
+    "flipcards": 22,
+    "checklist": 10,
+    "discover": 26,
+    "trivial": 42,
+    "scrambled-list": 14,
+    "image-gallery": 7,
     "rubric": 5,
-    "quick-questions": 26
+    "sort": 26,
+    "casestudy": 5,
+    "example": 4,
+    "periodic-table": 14,
+    "select-media-files": 25,
+    "quick-questions-video": 27
   },
   "idevicesBundle": {
-    "count": 49,
-    "files": 1133,
-    "size": 13104704,
-    "hash": "69afd98a88ad0bcb43b10ae80253f95f47a488c688f7d9827d2e0ef2a106e629"
+    "count": 43,
+    "files": 915,
+    "size": 4332741,
+    "hash": "31c1f168364664ec23b7a44d57d18fe7e9cc9d6cb0567f32e466f15be805fb18"
   },
   "libs": {
     "files": 9,
     "size": 308897,
-    "hash": "225dd886b8be471dd769ceea050126763c873bb5f11d8e969752bae94e01d72b"
+    "hash": "9f2ca86db7ab30443d6e8d0380beef460bf833540f7cf11cf178d579d660cb87"
   },
   "common": {
     "files": 132,
     "size": 2710901,
-    "hash": "68aa1d624c09d33799c58f954c83812fa1cdf90def94dc47636c70a19b535073"
+    "hash": "12b33b4bb32a893a39f882aaacabb9b3bc840dd131b6748025bb8c3ad84443fd"
   },
   "contentCss": {
-    "files": 3,
-    "size": 4231,
-    "hash": "d9a995317490e3f3517b6f6355b6e0cf41072fcd6a4f3f54ca654b389a7c8633"
+    "files": 4,
+    "size": 44278,
+    "hash": "2358c22f6d83b9af669cb2e00456e0a9e2878c71976db12668e582037a534b4f"
   }
 }

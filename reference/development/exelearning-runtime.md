@@ -11,22 +11,44 @@ Desde este repositorio:
 scripts/sync-exe-bundles.sh
 ```
 
-Por defecto usa:
+Por defecto el script consulta la ultima release estable publicada en GitHub.
+Si `app/exe-runtime/manifest.json` ya indica esa misma release, no hace nada.
+Si detecta una release nueva, descarga su paquete estatico y actualiza:
+
+```text
+exelearning-static-vX.Y.Z.zip
+```
+
+El origen oficial sigue siendo:
+
+```text
+https://github.com/exelearning/exelearning
+```
+
+Opciones utiles:
+
+```bash
+scripts/sync-exe-bundles.sh --force
+scripts/sync-exe-bundles.sh --from-main
+scripts/sync-exe-bundles.sh --from-main --skip-build
+```
+
+- `--force`: vuelve a sincronizar desde la ultima release aunque el manifest ya
+  marque esa misma version.
+- `--from-main`: usa una instantanea de desarrollo de la rama `main` en lugar
+  de la ultima release estable.
+- `--from-main --skip-build`: copia los artefactos ya presentes en el clon de
+  `main` sin reconstruirlos con `bun`.
+
+En modo `--from-main`, el script hace un `git clone --depth 1` en un directorio
+temporal, reconstruye los bundles si procede y despues copia a este repo solo
+los artefactos y plantillas que usa EdEX.
+
+Si quieres revisar o depurar el origen en local, la copia disponible en esta
+maquina esta en:
 
 ```text
 /home/jjdeharo/Documentos/github/OTROS_REPOSITORIOS/exelearning
-```
-
-Tambien se puede indicar otra copia:
-
-```bash
-scripts/sync-exe-bundles.sh --source /ruta/a/exelearning
-```
-
-Si los bundles ya estan generados y solo quieres copiarlos:
-
-```bash
-scripts/sync-exe-bundles.sh --skip-build
 ```
 
 El script copia:
@@ -36,8 +58,9 @@ El script copia:
 - `public/bundles/`
 - `public/files/perm/themes/base/`
 
-Despues genera `app/exe-runtime/manifest.json` con la ruta de origen, rama,
-commit, version, fecha UTC y hashes SHA-256 de los archivos copiados.
+Despues genera `app/exe-runtime/manifest.json` con el origen usado
+(`release` o `main`), release o rama, commit, version, fecha UTC y hashes
+SHA-256 de los archivos copiados.
 
 ## Uso previsto
 

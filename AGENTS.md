@@ -25,7 +25,7 @@ Prioridad acordada: **compatibilidad real con eXeLearning** y cambios automátic
 - `app/official-styles.json`: catálogo de plantillas oficiales (`base`, `flux`, `neo`, `nova`, `universal`, `zen`).
 - `reference/development/styles.md`: referencia de campos y empaquetado de estilos eXe.
 - `reference/themes/official/`: copia de estilos oficiales para comparación y pruebas.
-- Repo local de eXeLearning ya disponible para consulta (no clonar de nuevo): `/home/jjdeharo/Documentos/github/exelearning/`.
+- Repo local de eXeLearning ya disponible para consulta (no clonar de nuevo): `/home/jjdeharo/Documentos/github/OTROS_REPOSITORIOS/exelearning`.
 
 ## Funcionalidades implementadas
 - Carga de plantilla oficial y carga de ZIP.
@@ -47,7 +47,7 @@ Prioridad acordada: **compatibilidad real con eXeLearning** y cambios automátic
 - Sanitización automática de selectores inseguros en `quick-overrides`.
 - Selectores protegidos para evitar efectos colaterales (`.box-toggle`, togglers, etc.).
 - El editor no debe exigir conocimientos de CSS para resolver errores comunes: corrige automáticamente cuando es posible.
-- Para actualizar recursos desde eXeLearning, usar `scripts/sync-exe-bundles.sh`. Este script debe mantener sincronizados tanto `app/exe-runtime/` como `reference/themes/official/` y regenerar `app/official-styles.json`; no actualizar solo una de esas partes.
+- Para actualizar recursos desde eXeLearning, usar `scripts/sync-exe-bundles.sh`. Por defecto sincroniza contra la ultima release estable y solo actualiza si detecta una nueva; `--from-main` queda reservado para snapshots de desarrollo. Debe mantener sincronizados tanto `app/exe-runtime/` como `reference/themes/official/` y regenerar `app/official-styles.json`; no actualizar solo una de esas partes.
 
 ## Reglas de exportación
 - Se bloquea exportación solo por incidencias críticas:

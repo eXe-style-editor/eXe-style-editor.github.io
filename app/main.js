@@ -915,6 +915,7 @@ const els = {
   previewPanel: document.getElementById("previewPanel"),
   previewViewport: document.getElementById("previewViewport"),
   helpLink: document.getElementById("helpLink"),
+  runtimeSourceBadge: document.getElementById("runtimeSourceBadge"),
   busyOverlay: document.getElementById("busyOverlay"),
   busyOverlayText: document.getElementById("busyOverlayText"),
   trialNotice: document.getElementById("trialNotice"),
@@ -7915,6 +7916,57 @@ function initFooterPrivacyToggle() {
   setOpen(false);
 }
 
+function shortCommit(commit) {
+  return String(commit || "").trim().slice(0, 7);
+}
+
+function getRuntimeSourceBadgeInfo(manifest) {
+  if (!manifest || typeof manifest !== "object") return null;
+
+  const sourceMode = String(manifest.sourceMode || "").trim();
+  const releaseTag = String(manifest.sourceReleaseTag || "").trim();
+  const sourceVersion = String(manifest.sourceVersion || "").trim();
+  const sourceBranch = String(manifest.sourceBranch || "").trim();
+  const sourceCommit = String(manifest.sourceCommit || "").trim();
+
+  if (releaseTag || sourceVersion) {
+    const version = sourceVersion || releaseTag.replace(/^v/i, "");
+    const releaseText = releaseTag || `v${version}`;
+    return {
+      text: `eXe ${version}`,
+      title: `Bundles sincronizados desde la release ${releaseText}`
+    };
+  }
+
+  if (sourceMode === "main" || sourceBranch) {
+    const branch = sourceBranch || sourceMode || "main";
+    const commitText = shortCommit(sourceCommit);
+    return {
+      text: `eXe ${branch}`,
+      title: commitText
+        ? `Bundles sincronizados desde ${branch} @ ${commitText}`
+        : `Bundles sincronizados desde ${branch}`
+    };
+  }
+
+  return null;
+}
+
+async function loadRuntimeSourceBadge() {
+  if (!(els.runtimeSourceBadge instanceof HTMLElement)) return;
+  const manifest = window.__EDEX_RUNTIME_SOURCE__;
+  const badge = getRuntimeSourceBadgeInfo(manifest);
+  if (!badge) {
+    els.runtimeSourceBadge.hidden = true;
+    els.runtimeSourceBadge.textContent = "";
+    els.runtimeSourceBadge.removeAttribute("title");
+    return;
+  }
+  els.runtimeSourceBadge.textContent = badge.text;
+  els.runtimeSourceBadge.title = badge.title;
+  els.runtimeSourceBadge.hidden = false;
+}
+
 async function loadDefaultBootElpx() {
   const url = defaultBootElpxUrl();
   const response = await fetch(url, { cache: "no-store" });
@@ -7952,6 +8004,7 @@ async function loadDefaultBootElpx() {
   previewSettingsToUI();
   scheduleAnalyticsLoad();
   try {
+    await loadRuntimeSourceBadge();
     await loadOfficialStylesCatalog();
     await loadDefaultBootElpx();
   } catch (err) {

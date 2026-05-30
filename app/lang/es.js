@@ -332,7 +332,6 @@ window.$i18n.es = {
   "footer.analyticsNoticeCompact": "Los archivos se procesan localmente en este navegador. Solo se recogen estadísticas de uso agregadas propias y no se envían archivos ni datos a terceros.",
   "footer.disclaimer": "Proyecto independiente inspirado visualmente en eXeLearning. No esta afiliado ni avalado oficialmente por eXeLearning o INTEF.",
   "footer.disclaimerCompact": "Proyecto independiente, sin afiliación oficial con eXeLearning o INTEF.",
-  "quick.titles.compactNoHeader": "Reducir el espacio superior en iDevices sin título",
   "quick.titles.summary": "Títulos de página y proyecto",
   "quick.titles.pageSize": "Tamaño título página (rem)",
   "quick.titles.pageWeight": "Peso título página",

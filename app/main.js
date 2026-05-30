@@ -3571,6 +3571,16 @@ function quickToUI(values) {
   updateContentWidthControls(values);
 }
 
+function syncQuickInputMirrors(sourceInput) {
+  if (!sourceInput?.dataset?.quick) return;
+  const key = sourceInput.dataset.quick;
+  for (const input of els.quickInputs) {
+    if (input === sourceInput || input.dataset.quick !== key) continue;
+    if (sourceInput.type === "checkbox") input.checked = sourceInput.checked;
+    else input.value = sourceInput.value;
+  }
+}
+
 function updateContentWidthControls(values = state.quick) {
   const mode = String(values?.contentWidthMode || QUICK_DEFAULTS.contentWidthMode).toLowerCase();
   const pxWrap = document.getElementById("contentWidthPxWrap");
@@ -4793,7 +4803,10 @@ function applyClickEditChanges() {
   if (compactWrapVisible && els.clickCompactNoHeader) {
     const nextCompact = Boolean(els.clickCompactNoHeader.checked);
     if (Boolean(state.quick.compactNoHeaderIdevices) !== nextCompact) {
-      if (els.compactNoHeaderIdevices) els.compactNoHeaderIdevices.checked = nextCompact;
+      if (els.compactNoHeaderIdevices) {
+        els.compactNoHeaderIdevices.checked = nextCompact;
+        syncQuickInputMirrors(els.compactNoHeaderIdevices);
+      }
       applyQuickControls({ showStatus: false, changedKey: "compactNoHeaderIdevices" });
       compactUpdated = true;
     }
@@ -7808,9 +7821,11 @@ function setupEvents() {
 
   for (const input of els.quickInputs) {
     input.addEventListener("input", () => {
+      syncQuickInputMirrors(input);
       applyQuickControls({ showStatus: false, changedKey: input.dataset.quick || "" });
     });
     input.addEventListener("change", () => {
+      syncQuickInputMirrors(input);
       applyQuickControls({ showStatus: false, changedKey: input.dataset.quick || "" });
     });
   }

@@ -695,8 +695,11 @@ const QUICK_DEFAULTS = {
   titleColor: "#078e8e",
   textColor: "#333333",
   contentBgColor: "#ffffff",
+  contentBgColorAlpha: 100,
   pageBgColor: "#ffffff",
+  pageBgColorAlpha: 100,
   contentOuterBgColor: "#eef1f4",
+  contentOuterBgColorAlpha: 100,
   contentWidthMode: "default",
   contentWidth: 1280,
   contentWidthPercent: 100,
@@ -718,17 +721,22 @@ const QUICK_DEFAULTS = {
   boxTitleGap: 10,
   compactNoHeaderIdevices: false,
   menuBgColor: "#f6f6f6",
+  menuBgColorAlpha: 100,
   menuTextColor: "#000000",
   menuHoverBgColor: "#f2f2f2",
+  menuHoverBgColorAlpha: 100,
   menuHoverTextColor: "#000000",
   menuActiveBgColor: "#ffffff",
+  menuActiveBgColorAlpha: 100,
   menuActiveTextColor: "#d76b4a",
   boxBgColor: "#ffffff",
+  boxBgColorAlpha: 100,
   boxBorderColor: "#dddddd",
   boxTitleColor: "#054d4d",
   boxTextAlign: "inherit",
   boxFontSize: "inherit",
   buttonBgColor: "#005f73",
+  buttonBgColorAlpha: 100,
   buttonTextColor: "#ffffff",
   bgImageEnabled: false,
   bgImagePath: "",
@@ -2984,11 +2992,12 @@ function rgbToHex(input, fallback = "#000000") {
   const raw = String(input || "").trim();
   if (!raw) return fallback;
   if (/^#[0-9a-f]{6}$/i.test(raw)) return raw.toLowerCase();
+  if (/^#[0-9a-f]{8}$/i.test(raw)) return raw.slice(0, 7).toLowerCase();
   if (/^#[0-9a-f]{3}$/i.test(raw)) {
     const short = raw.slice(1).toLowerCase();
     return `#${short[0]}${short[0]}${short[1]}${short[1]}${short[2]}${short[2]}`;
   }
-  const m = raw.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  const m = raw.match(/rgba?\(\s*(\d+)(?:\s*,\s*|\s+)(\d+)(?:\s*,\s*|\s+)(\d+)/i);
   if (!m) return fallback;
   const toHex = (n) => {
     const v = Math.max(0, Math.min(255, Number.parseInt(n, 10) || 0));
@@ -3001,12 +3010,24 @@ function alphaPercentFromColor(input, fallback = 0) {
   const raw = String(input || "").trim().toLowerCase();
   if (!raw) return fallback;
   if (raw === "transparent") return 100;
+  const hex8 = raw.match(/^#([0-9a-f]{8})$/i);
+  if (hex8) {
+    const alpha = Number.parseInt(hex8[1].slice(6, 8), 16) / 255;
+    return Math.round((1 - alpha) * 100);
+  }
   const rgba = raw.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)/i);
   if (rgba && rgba[4]) {
     const alpha = Math.max(0, Math.min(1, Number.parseFloat(rgba[4]) || 0));
     return Math.round((1 - alpha) * 100);
   }
-  const rgb = raw.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+  const modernAlpha = raw.match(/rgba?\(\s*\d+(?:\s*,\s*|\s+)\d+(?:\s*,\s*|\s+)\d+\s*\/\s*([0-9.]+%?)\s*\)/i);
+  if (modernAlpha && modernAlpha[1]) {
+    const token = modernAlpha[1];
+    const parsed = Number.parseFloat(token);
+    const alpha = token.endsWith("%") ? parsed / 100 : parsed;
+    return Math.round((1 - Math.max(0, Math.min(1, alpha || 0))) * 100);
+  }
+  const rgb = raw.match(/rgb\(\s*(\d+)(?:\s*,\s*|\s+)(\d+)(?:\s*,\s*|\s+)(\d+)\s*\)/i);
   if (rgb) return 0;
   return fallback;
 }
@@ -3035,6 +3056,18 @@ function cssColorWithTransparency(hex, transparencyPercent) {
   const alpha = Math.max(0, Math.min(1, 1 - (normalizePercentNumber(transparencyPercent, 0) / 100)));
   if (alpha >= 0.999) return `rgb(${r}, ${g}, ${b})`;
   return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(2)})`;
+}
+
+function updateAlphaDisplay(input) {
+  if (input.type !== "range") return;
+  const span = input.parentElement?.querySelector(".alpha-value");
+  if (span) span.textContent = `${input.value}%`;
+}
+
+function colorWithAlpha(hex, alpha) {
+  const a = Math.max(0, Math.min(100, Number(alpha)));
+  if (!Number.isFinite(a) || a >= 100) return normalizeHex(hex);
+  return cssColorWithTransparency(hex, 100 - a);
 }
 
 function quickFromPreviewSnapshot(baseValues) {
@@ -3493,7 +3526,7 @@ function quickFromUI({ base = state.quick, onlyKey = "" } = {}) {
     const key = input.dataset.quick;
     if (!key || !(key in next)) continue;
     if (normalizedOnlyKey && key !== normalizedOnlyKey) continue;
-    if (input.type === "number") next[key] = Number(input.value || QUICK_DEFAULTS[key]);
+    if (input.type === "number" || input.type === "range") next[key] = Number(input.value || QUICK_DEFAULTS[key]);
     else if (input.type === "checkbox") next[key] = input.checked;
     else next[key] = input.value;
   }
@@ -3558,7 +3591,7 @@ function quickToUI(values) {
       ensureFontFamilyOption(String(values[key]), input.id);
     }
     if (input.type === "checkbox") input.checked = Boolean(values[key]);
-    else input.value = String(values[key]);
+    else { input.value = String(values[key]); updateAlphaDisplay(input); }
   }
   refreshHeaderFooterImageSelects();
   refreshNavIconSelects();
@@ -4257,7 +4290,7 @@ function quickSyncValueFromDeclaration(prop, value, fallback = "") {
   if (!value) return "";
   const normalizedProp = String(prop || "").trim().toLowerCase();
   if (normalizedProp === "color" || normalizedProp === "background-color") {
-    return normalizeHex(value, fallback || QUICK_DEFAULTS.menuTextColor);
+    return rgbToHex(value, normalizeHex(value, fallback || QUICK_DEFAULTS.menuTextColor));
   }
   if (normalizedProp === "font-size") {
     const px = String(value).match(/([0-9.]+)\s*px/i);
@@ -4276,9 +4309,11 @@ function quickUpdatesFromClickEdit(baseSelector, declarations, { withInteractive
   const selectorParts = splitSelectorList(baseSelector);
   if (!selector) return null;
   const updates = {};
-  const setColor = (quickKey, cssProp) => {
-    const next = quickSyncValueFromDeclaration(cssProp, declarations[cssProp], state.quick[quickKey]);
+  const setColor = (quickKey, cssProp, alphaKey = "") => {
+    const raw = declarations[cssProp];
+    const next = quickSyncValueFromDeclaration(cssProp, raw, state.quick[quickKey]);
     if (next) updates[quickKey] = next;
+    if (alphaKey && raw) updates[alphaKey] = Math.max(0, Math.min(100, 100 - alphaPercentFromColor(raw, 0)));
   };
   const setWeight = (quickKey, cssProp) => {
     const next = quickSyncValueFromDeclaration(cssProp, declarations[cssProp], "");
@@ -4297,7 +4332,7 @@ function quickUpdatesFromClickEdit(baseSelector, declarations, { withInteractive
     selector === normalizeSelectorForMatch(".exe-content .box-content, .exe-content .iDevice_content, .exe-content .iDevice_inner")
     || selectorListEveryEndsWith(".box-content", ".idevice_content", ".idevice_inner")
   ) {
-    setColor("boxBgColor", "background-color");
+    setColor("boxBgColor", "background-color", "boxBgColorAlpha");
     return Object.keys(updates).length ? updates : null;
   }
   if (
@@ -4331,7 +4366,7 @@ function quickUpdatesFromClickEdit(baseSelector, declarations, { withInteractive
     return Object.keys(updates).length ? updates : null;
   }
   if (selector === normalizeSelectorForMatch("#siteNav") || selectorListIncludes("#sitenav")) {
-    setColor("menuBgColor", "background-color");
+    setColor("menuBgColor", "background-color", "menuBgColorAlpha");
     return Object.keys(updates).length ? updates : null;
   }
   if (selector === normalizeSelectorForMatch("#siteNav a") || selectorListIncludes("#sitenav a")) {
@@ -4339,7 +4374,7 @@ function quickUpdatesFromClickEdit(baseSelector, declarations, { withInteractive
     return Object.keys(updates).length ? updates : null;
   }
   if (selector === normalizeSelectorForMatch("#siteNav a.active") || selectorListIncludes("#sitenav a.active")) {
-    setColor("menuActiveBgColor", "background-color");
+    setColor("menuActiveBgColor", "background-color", "menuActiveBgColorAlpha");
     setColor("menuActiveTextColor", "color");
     return Object.keys(updates).length ? updates : null;
   }
@@ -4348,7 +4383,7 @@ function quickUpdatesFromClickEdit(baseSelector, declarations, { withInteractive
     || selectorListIncludes(".exe-content button:not(.toggler):not(.box-toggle)")
     || selectorParts.some((part) => part.endsWith("button:not(.toggler):not(.box-toggle)"))
   ) {
-    setColor("buttonBgColor", "background-color");
+    setColor("buttonBgColor", "background-color", "buttonBgColorAlpha");
     setColor("buttonTextColor", "color");
     return Object.keys(updates).length ? updates : null;
   }
@@ -4979,6 +5014,12 @@ function quickFromCss(cssText) {
     }
     return value;
   };
+  const applyColorOpacity = (colorKey, alphaKey, value) => {
+    const raw = String(value || "").trim();
+    if (!raw) return;
+    q[colorKey] = rgbToHex(raw, normalizeHex(raw, q[colorKey]));
+    q[alphaKey] = Math.max(0, Math.min(100, 100 - alphaPercentFromColor(raw, 0)));
+  };
   const lastRulePropWithUrl = (selectors, propNames) => {
     let value = "";
     for (const rule of cssRules) {
@@ -5002,10 +5043,7 @@ function quickFromCss(cssText) {
   const contentLineHeightRaw = lastRulePropValue(contentTypographySelectors, ["line-height"]);
   const contentFontFamilyRaw = lastRulePropValue(contentTypographySelectors, ["font-family"]);
 
-  q.pageBgColor = normalizeHex(
-    lastRulePropValue(bodyModeSelectors, ["background-color", "background"]) || q.pageBgColor,
-    q.pageBgColor
-  );
+  applyColorOpacity("pageBgColor", "pageBgColorAlpha", lastRulePropValue(bodyModeSelectors, ["background-color", "background"]) || q.pageBgColor);
   q.fontBody = contentFontFamilyRaw
     || lastRulePropValue(bodyModeSelectors, ["font-family"])
     || q.fontBody;
@@ -5077,46 +5115,43 @@ function quickFromCss(cssText) {
     lastRulePropValue([".exe-content", "#node-content-container.exe-content"], ["color"]) || q.textColor,
     q.textColor
   );
-  q.contentBgColor = normalizeHex(
-    lastRulePropValue([".exe-content", "#node-content-container.exe-content"], ["background-color", "background"])
-      || q.contentBgColor,
-    q.contentBgColor
+  applyColorOpacity(
+    "contentBgColor",
+    "contentBgColorAlpha",
+    lastRulePropValue([".exe-content", "#node-content-container.exe-content"], ["background-color", "background"]) || q.contentBgColor
   );
-  q.menuBgColor = normalizeHex(
-    lastRulePropValue(["#siteNav"], ["background-color", "background"])
-      || q.menuBgColor,
-    q.menuBgColor
-  );
+  applyColorOpacity("menuBgColor", "menuBgColorAlpha", lastRulePropValue(["#siteNav"], ["background-color", "background"]) || q.menuBgColor);
   q.menuTextColor = normalizeHex(
     lastRulePropValue(["#siteNav a", "#siteNav ul li a", "#siteNav"], ["color"])
       || q.menuTextColor,
     q.menuTextColor
   );
-  q.menuHoverBgColor = normalizeHex(
-    lastRulePropValue(["#siteNav a:hover", "#siteNav a:focus"], ["background-color", "background"])
-      || q.menuHoverBgColor,
-    q.menuHoverBgColor
+  applyColorOpacity(
+    "menuHoverBgColor",
+    "menuHoverBgColorAlpha",
+    lastRulePropValue(["#siteNav a:hover", "#siteNav a:focus"], ["background-color", "background"]) || q.menuHoverBgColor
   );
   q.menuHoverTextColor = normalizeHex(
     lastRulePropValue(["#siteNav a:hover", "#siteNav a:focus"], ["color"])
       || q.menuHoverTextColor,
     q.menuHoverTextColor
   );
-  q.menuActiveBgColor = normalizeHex(
-    lastRulePropValue(["#siteNav a.active"], ["background-color", "background"])
-      || q.menuActiveBgColor,
-    q.menuActiveBgColor
+  applyColorOpacity(
+    "menuActiveBgColor",
+    "menuActiveBgColorAlpha",
+    lastRulePropValue(["#siteNav a.active"], ["background-color", "background"]) || q.menuActiveBgColor
   );
   q.menuActiveTextColor = normalizeHex(
     lastRulePropValue(["#siteNav a.active"], ["color"]) || q.menuActiveTextColor,
     q.menuActiveTextColor
   );
-  q.boxBgColor = normalizeHex(
+  applyColorOpacity(
+    "boxBgColor",
+    "boxBgColorAlpha",
     lastRulePropValue([".exe-content .box-content", ".exe-content .iDevice_content", ".exe-content .iDevice_inner"], ["background-color"])
       || lastRulePropValue([".exe-content .box-content", ".exe-content .iDevice_content", ".exe-content .iDevice_inner"], ["background"])
       || matchValue(/\.exe-content \.box-content,\s*[\s\S]*?\.exe-content \.iDevice_content,\s*[\s\S]*?\.exe-content \.iDevice_inner\s*\{[\s\S]*?background-color:\s*([^;]+);/i, "")
-      || matchValue(/\.exe-content \.box-content,\s*[\s\S]*?\.exe-content \.iDevice_content,\s*[\s\S]*?\.exe-content \.iDevice_inner\s*\{[\s\S]*?background:\s*([^;]+);/i, q.boxBgColor),
-    q.boxBgColor
+      || matchValue(/\.exe-content \.box-content,\s*[\s\S]*?\.exe-content \.iDevice_content,\s*[\s\S]*?\.exe-content \.iDevice_inner\s*\{[\s\S]*?background:\s*([^;]+);/i, q.boxBgColor)
   );
   q.boxBorderColor = normalizeHex(matchValue(/\.exe-content \.box,\s*[\s\S]*?#node-content-container\.exe-content \.box\s*\{[\s\S]*?border-color:\s*([^;]+);/i, q.boxBorderColor), q.boxBorderColor);
   q.boxTitleColor = normalizeHex(
@@ -5150,10 +5185,10 @@ function quickFromCss(cssText) {
     else if (size <= 23) q.boxFontSize = "22px";
     else q.boxFontSize = "24px";
   }
-  q.buttonBgColor = normalizeHex(
-    lastRulePropValue([".exe-content button:not(.toggler):not(.box-toggle)"], ["background-color", "background"])
-      || q.buttonBgColor,
-    q.buttonBgColor
+  applyColorOpacity(
+    "buttonBgColor",
+    "buttonBgColorAlpha",
+    lastRulePropValue([".exe-content button:not(.toggler):not(.box-toggle)"], ["background-color", "background"]) || q.buttonBgColor
   );
   q.buttonTextColor = normalizeHex(
     lastRulePropValue([".exe-content button:not(.toggler):not(.box-toggle)"], ["color"])
@@ -5161,13 +5196,17 @@ function quickFromCss(cssText) {
     q.buttonTextColor
   );
 
-  const widthMeta = cssText.match(/\/\*\s*content-width-editor:mode=(default|px|percent|mixed);px=(\d+);pct=(\d+);center=(0|1)(?:;outer=(#[0-9a-f]{6}|#[0-9a-f]{8}))?\s*\*\//i);
+  const widthMeta = cssText.match(/\/\*\s*content-width-editor:mode=(default|px|percent|mixed);px=(\d+);pct=(\d+);center=(0|1)(?:;outer=(#[0-9a-f]{6}|#[0-9a-f]{8}))?(?:;outerAlpha=(\d+))?\s*\*\//i);
   if (widthMeta) {
     q.contentWidthMode = String(widthMeta[1] || q.contentWidthMode).toLowerCase();
     q.contentWidth = Number(widthMeta[2]) || q.contentWidth;
     q.contentWidthPercent = Number(widthMeta[3]) || q.contentWidthPercent;
     q.contentCentered = widthMeta[4] === "1";
-    q.contentOuterBgColor = normalizeHex(widthMeta[5] || "", QUICK_DEFAULTS.contentOuterBgColor);
+    q.contentOuterBgColor = rgbToHex(widthMeta[5] || "", QUICK_DEFAULTS.contentOuterBgColor);
+    if (widthMeta[5] && /^#[0-9a-f]{8}$/i.test(widthMeta[5])) {
+      q.contentOuterBgColorAlpha = 100 - alphaPercentFromColor(widthMeta[5], 0);
+    }
+    if (widthMeta[6]) q.contentOuterBgColorAlpha = Math.max(0, Math.min(100, Number(widthMeta[6]) || 0));
   } else {
     const quickBlock = getQuickBlock(cssText);
     if (quickBlock) {
@@ -5402,10 +5441,10 @@ function buildQuickCss({ important = true, base = null } = {}) {
   const navMenuIconPath = q.navIconMenuPath && state.files.has(q.navIconMenuPath) ? q.navIconMenuPath : "";
   const hasLateralSpace = q.contentWidthMode === "px" || q.contentWidthMode === "mixed" || (q.contentWidthMode === "percent" && q.contentWidthPercent < 100);
   const effectivePageBgColor = hasLateralSpace
-    ? normalizeHex(q.contentOuterBgColor, QUICK_DEFAULTS.contentOuterBgColor)
-    : normalizeHex(q.pageBgColor);
+    ? colorWithAlpha(q.contentOuterBgColor, q.contentOuterBgColorAlpha)
+    : colorWithAlpha(q.pageBgColor, q.pageBgColorAlpha);
   const logoMeta = `/* logo-editor:path=${logoPath};enabled=${q.logoEnabled ? "1" : "0"};size=${q.logoSize};position=${q.logoPosition};mx=${q.logoMarginX};my=${q.logoMarginY} */`;
-  const widthMeta = `/* content-width-editor:mode=${q.contentWidthMode};px=${q.contentWidth};pct=${q.contentWidthPercent};center=${q.contentCentered ? "1" : "0"};outer=${normalizeHex(q.contentOuterBgColor, QUICK_DEFAULTS.contentOuterBgColor)} */`;
+  const widthMeta = `/* content-width-editor:mode=${q.contentWidthMode};px=${q.contentWidth};pct=${q.contentWidthPercent};center=${q.contentCentered ? "1" : "0"};outer=${normalizeHex(q.contentOuterBgColor, QUICK_DEFAULTS.contentOuterBgColor)};outerAlpha=${Math.max(0, Math.min(100, Number(q.contentOuterBgColorAlpha) || 0))} */`;
   const bgMeta = `/* bg-editor:path=${bgImagePath};enabled=${q.bgImageEnabled ? "1" : "0"};repeat=${q.bgImageRepeat};soft=${Math.max(0, Math.min(90, Number(q.bgImageSoftness) || QUICK_DEFAULTS.bgImageSoftness))} */`;
   const headerMeta = `/* header-image-editor:path=${headerImagePath};enabled=${q.headerImageEnabled ? "1" : "0"};hide=${q.headerHideTitle ? "1" : "0"};height=${q.headerImageHeight};fit=${q.headerImageFit};pos=${q.headerImagePosition};repeat=${q.headerImageRepeat} */`;
   const footerMeta = `/* footer-image-editor:path=${footerImagePath};enabled=${q.footerImageEnabled ? "1" : "0"};height=${q.footerImageHeight};fit=${q.footerImageFit};pos=${q.footerImagePosition};repeat=${q.footerImageRepeat} */`;
@@ -5509,8 +5548,8 @@ ${joinSelectorList([
     || baseQuick.contentWidthMode === "mixed"
     || (baseQuick.contentWidthMode === "percent" && Number(baseQuick.contentWidthPercent) < 100);
   const baseEffectivePageBgColor = baseHasLateralSpace
-    ? normalizeHex(baseQuick.contentOuterBgColor, QUICK_DEFAULTS.contentOuterBgColor)
-    : normalizeHex(baseQuick.pageBgColor);
+    ? colorWithAlpha(baseQuick.contentOuterBgColor, baseQuick.contentOuterBgColorAlpha)
+    : colorWithAlpha(baseQuick.pageBgColor, baseQuick.pageBgColorAlpha);
   const buildRule = (selector, declarations) => {
     const lines = declarations.filter(Boolean);
     if (!lines.length) return "";
@@ -5521,7 +5560,7 @@ ${joinSelectorList([
     Number(q.baseFontSize) !== Number(baseQuick.baseFontSize) ? `  font-size: ${q.baseFontSize}px${bang};` : "",
     Number(q.lineHeight) !== Number(baseQuick.lineHeight) ? `  line-height: ${q.lineHeight}${bang};` : "",
     normalizeHex(q.textColor) !== normalizeHex(baseQuick.textColor) ? `  color: ${normalizeHex(q.textColor)}${bang};` : "",
-    normalizeHex(q.contentBgColor) !== normalizeHex(baseQuick.contentBgColor) ? `  background-color: ${normalizeHex(q.contentBgColor)}${bang};` : ""
+    (normalizeHex(q.contentBgColor) !== normalizeHex(baseQuick.contentBgColor) || Number(q.contentBgColorAlpha) !== Number(baseQuick.contentBgColorAlpha)) ? `  background-color: ${colorWithAlpha(q.contentBgColor, q.contentBgColorAlpha)}${bang};` : ""
   ]);
   const tinymceTitleFontRule = buildRule("body#tinymce .page-title,\nbody#tinymce .box-title,\nbody#tinymce .iDeviceTitle", [
     String(q.fontTitles) !== String(baseQuick.fontTitles) ? `  font-family: ${q.fontTitles}${bang};` : ""
@@ -5542,14 +5581,14 @@ ${joinSelectorList([
     Number(q.boxTitleSize) !== Number(baseQuick.boxTitleSize) ? `  font-size: ${q.boxTitleSize}rem${bang};` : ""
   ]);
   const tinymceBoxContentRule = buildRule("body#tinymce .box-content,\nbody#tinymce .iDevice_content,\nbody#tinymce .iDevice_inner", [
-    normalizeHex(q.boxBgColor) !== normalizeHex(baseQuick.boxBgColor) ? `  background-color: ${normalizeHex(q.boxBgColor)}${boxBgBang};` : "",
+    (normalizeHex(q.boxBgColor) !== normalizeHex(baseQuick.boxBgColor) || Number(q.boxBgColorAlpha) !== Number(baseQuick.boxBgColorAlpha)) ? `  background-color: ${colorWithAlpha(q.boxBgColor, q.boxBgColorAlpha)}${boxBgBang};` : "",
     String(q.boxTextAlign) !== String(baseQuick.boxTextAlign) ? `  text-align: ${q.boxTextAlign}${bang};` : "",
     String(q.boxFontSize) !== String(baseQuick.boxFontSize) && q.boxFontSize !== "inherit" ? `  font-size: ${q.boxFontSize}${bang};` : ""
   ]);
   const tinymceButtonRule = buildRule("body#tinymce button:not(.toggler):not(.box-toggle)", [
-    normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) ? `  background-color: ${normalizeHex(q.buttonBgColor)}${bang};` : "",
+    (normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) || Number(q.buttonBgColorAlpha) !== Number(baseQuick.buttonBgColorAlpha)) ? `  background-color: ${colorWithAlpha(q.buttonBgColor, q.buttonBgColorAlpha)}${bang};` : "",
     normalizeHex(q.buttonTextColor) !== normalizeHex(baseQuick.buttonTextColor) ? `  color: ${normalizeHex(q.buttonTextColor)}${bang};` : "",
-    normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) ? `  border-color: ${normalizeHex(q.buttonBgColor)}${bang};` : ""
+    (normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) || Number(q.buttonBgColorAlpha) !== Number(baseQuick.buttonBgColorAlpha)) ? `  border-color: ${colorWithAlpha(q.buttonBgColor, q.buttonBgColorAlpha)}${bang};` : ""
   ]);
   const bodyRule = buildRule(bodyModeSelectors, [
     effectivePageBgColor !== baseEffectivePageBgColor ? `  background-color: ${effectivePageBgColor}${bang};` : "",
@@ -5562,7 +5601,7 @@ ${joinSelectorList([
     Number(q.baseFontSize) !== Number(baseQuick.baseFontSize) ? `  font-size: ${q.baseFontSize}px${bang};` : "",
     Number(q.lineHeight) !== Number(baseQuick.lineHeight) ? `  line-height: ${q.lineHeight}${bang};` : "",
     normalizeHex(q.textColor) !== normalizeHex(baseQuick.textColor) ? `  color: ${normalizeHex(q.textColor)}${bang};` : "",
-    normalizeHex(q.contentBgColor) !== normalizeHex(baseQuick.contentBgColor) ? `  background-color: ${normalizeHex(q.contentBgColor)}${bang};` : ""
+    (normalizeHex(q.contentBgColor) !== normalizeHex(baseQuick.contentBgColor) || Number(q.contentBgColorAlpha) !== Number(baseQuick.contentBgColorAlpha)) ? `  background-color: ${colorWithAlpha(q.contentBgColor, q.contentBgColorAlpha)}${bang};` : ""
   ]);
   const titleFontRule = buildRule(".exe-content .page-title,\n.exe-content .box-title,\n.exe-content .iDeviceTitle", [
     String(q.fontTitles) !== String(baseQuick.fontTitles) ? `  font-family: ${q.fontTitles}${bang};` : ""
@@ -5584,18 +5623,18 @@ ${joinSelectorList([
     Number(q.pageTitleMarginBottom) !== Number(baseQuick.pageTitleMarginBottom) ? `  margin-bottom: ${q.pageTitleMarginBottom}rem${bang};` : ""
   ]);
   const siteNavRule = buildRule("#siteNav", [
-    normalizeHex(q.menuBgColor) !== normalizeHex(baseQuick.menuBgColor) ? `  background-color: ${normalizeHex(q.menuBgColor)}${bang};` : ""
+    (normalizeHex(q.menuBgColor) !== normalizeHex(baseQuick.menuBgColor) || Number(q.menuBgColorAlpha) !== Number(baseQuick.menuBgColorAlpha)) ? `  background-color: ${colorWithAlpha(q.menuBgColor, q.menuBgColorAlpha)}${bang};` : ""
   ]);
   const siteNavLinkRule = buildRule("#siteNav a", [
     String(q.fontMenu) !== String(baseQuick.fontMenu) ? `  font-family: ${q.fontMenu}${bang};` : "",
     normalizeHex(q.menuTextColor) !== normalizeHex(baseQuick.menuTextColor) ? `  color: ${normalizeHex(q.menuTextColor)}${bang};` : ""
   ]);
   const siteNavHoverRule = buildRule("#siteNav a:hover,\n#siteNav a:focus", [
-    normalizeHex(q.menuHoverBgColor) !== normalizeHex(baseQuick.menuHoverBgColor) ? `  background-color: ${normalizeHex(q.menuHoverBgColor)}${bang};` : "",
+    (normalizeHex(q.menuHoverBgColor) !== normalizeHex(baseQuick.menuHoverBgColor) || Number(q.menuHoverBgColorAlpha) !== Number(baseQuick.menuHoverBgColorAlpha)) ? `  background-color: ${colorWithAlpha(q.menuHoverBgColor, q.menuHoverBgColorAlpha)}${bang};` : "",
     normalizeHex(q.menuHoverTextColor) !== normalizeHex(baseQuick.menuHoverTextColor) ? `  color: ${normalizeHex(q.menuHoverTextColor)}${bang};` : ""
   ]);
   const siteNavActiveRule = buildRule("#siteNav a.active", [
-    normalizeHex(q.menuActiveBgColor) !== normalizeHex(baseQuick.menuActiveBgColor) ? `  background-color: ${normalizeHex(q.menuActiveBgColor)}${bang};` : "",
+    (normalizeHex(q.menuActiveBgColor) !== normalizeHex(baseQuick.menuActiveBgColor) || Number(q.menuActiveBgColorAlpha) !== Number(baseQuick.menuActiveBgColorAlpha)) ? `  background-color: ${colorWithAlpha(q.menuActiveBgColor, q.menuActiveBgColorAlpha)}${bang};` : "",
     normalizeHex(q.menuActiveTextColor) !== normalizeHex(baseQuick.menuActiveTextColor) ? `  color: ${normalizeHex(q.menuActiveTextColor)}${bang};` : ""
   ]);
   const boxBorderRule = buildRule(".exe-content .box,\n#node-content-container.exe-content .box", [
@@ -5609,14 +5648,14 @@ ${joinSelectorList([
     Number(q.boxTitleGap) !== Number(baseQuick.boxTitleGap) ? `  gap: ${q.boxTitleGap}px${bang};` : ""
   ]);
   const boxContentRule = buildRule(".exe-content .box-content,\n.exe-content .iDevice_content,\n.exe-content .iDevice_inner", [
-    normalizeHex(q.boxBgColor) !== normalizeHex(baseQuick.boxBgColor) ? `  background-color: ${normalizeHex(q.boxBgColor)}${boxBgBang};` : "",
+    (normalizeHex(q.boxBgColor) !== normalizeHex(baseQuick.boxBgColor) || Number(q.boxBgColorAlpha) !== Number(baseQuick.boxBgColorAlpha)) ? `  background-color: ${colorWithAlpha(q.boxBgColor, q.boxBgColorAlpha)}${boxBgBang};` : "",
     String(q.boxTextAlign) !== String(baseQuick.boxTextAlign) ? `  text-align: ${q.boxTextAlign}${bang};` : "",
     String(q.boxFontSize) !== String(baseQuick.boxFontSize) && q.boxFontSize !== "inherit" ? `  font-size: ${q.boxFontSize}${bang};` : ""
   ]);
   const buttonRule = buildRule(".exe-content button:not(.toggler):not(.box-toggle)", [
-    normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) ? `  background-color: ${normalizeHex(q.buttonBgColor)}${bang};` : "",
+    (normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) || Number(q.buttonBgColorAlpha) !== Number(baseQuick.buttonBgColorAlpha)) ? `  background-color: ${colorWithAlpha(q.buttonBgColor, q.buttonBgColorAlpha)}${bang};` : "",
     normalizeHex(q.buttonTextColor) !== normalizeHex(baseQuick.buttonTextColor) ? `  color: ${normalizeHex(q.buttonTextColor)}${bang};` : "",
-    normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) ? `  border-color: ${normalizeHex(q.buttonBgColor)}${bang};` : ""
+    (normalizeHex(q.buttonBgColor) !== normalizeHex(baseQuick.buttonBgColor) || Number(q.buttonBgColorAlpha) !== Number(baseQuick.buttonBgColorAlpha)) ? `  border-color: ${colorWithAlpha(q.buttonBgColor, q.buttonBgColorAlpha)}${bang};` : ""
   ]);
   return `
 ${logoMeta}
@@ -7821,10 +7860,12 @@ function setupEvents() {
 
   for (const input of els.quickInputs) {
     input.addEventListener("input", () => {
+      updateAlphaDisplay(input);
       syncQuickInputMirrors(input);
       applyQuickControls({ showStatus: false, changedKey: input.dataset.quick || "" });
     });
     input.addEventListener("change", () => {
+      updateAlphaDisplay(input);
       syncQuickInputMirrors(input);
       applyQuickControls({ showStatus: false, changedKey: input.dataset.quick || "" });
     });

@@ -130,10 +130,23 @@
               <label><span data-i18n="quick.appearance.linkColor">Color enlaces</span> <input id="linkColor" data-quick="linkColor" type="color" /></label>
               <label><span data-i18n="quick.appearance.pageTitleColor">Color título página</span> <input id="titleColor" data-quick="titleColor" type="color" /></label>
               <label><span data-i18n="quick.appearance.baseTextColor">Color texto base</span> <input id="textColor" data-quick="textColor" type="color" /></label>
-              <label><span data-i18n="quick.appearance.contentBg">Fondo contenido</span> <input id="contentBgColor" data-quick="contentBgColor" type="color" /></label>
-              <label><span data-i18n="quick.appearance.globalBg">Fondo global</span> <input id="pageBgColor" data-quick="pageBgColor" type="color" /></label>
+              <label><span data-i18n="quick.appearance.contentBg">Fondo contenido</span>
+                <div class="color-alpha-wrap">
+                  <input id="contentBgColor" data-quick="contentBgColor" type="color" />
+                  <div class="alpha-row"><input id="contentBgColorAlpha" data-quick="contentBgColorAlpha" type="range" min="0" max="100" value="100" title="Opacidad" /><span class="alpha-value">100%</span></div>
+                </div>
+              </label>
+              <label><span data-i18n="quick.appearance.globalBg">Fondo global</span>
+                <div class="color-alpha-wrap">
+                  <input id="pageBgColor" data-quick="pageBgColor" type="color" />
+                  <div class="alpha-row"><input id="pageBgColorAlpha" data-quick="pageBgColorAlpha" type="range" min="0" max="100" value="100" title="Opacidad" /><span class="alpha-value">100%</span></div>
+                </div>
+              </label>
               <label id="contentOuterBgWrap"><span data-i18n="quick.appearance.sideSpace">Espacio lateral</span>
-                <input id="contentOuterBgColor" data-quick="contentOuterBgColor" type="color" />
+                <div class="color-alpha-wrap">
+                  <input id="contentOuterBgColor" data-quick="contentOuterBgColor" type="color" />
+                  <div class="alpha-row"><input id="contentOuterBgColorAlpha" data-quick="contentOuterBgColorAlpha" type="range" min="0" max="100" value="100" title="Opacidad" /><span class="alpha-value">100%</span></div>
+                </div>
               </label>
             </div>
           </div>
@@ -458,11 +471,26 @@
           <summary><span class="summary-icon material-symbols-outlined" aria-hidden="true">menu</span><span data-i18n="quick.menu.summary">Navegación (menú lateral)</span></summary>
           <div class="section-content quick-grid">
             <div class="palette-compact">
-              <label><span data-i18n="quick.menu.bg">Fondo menú</span> <input id="menuBgColor" data-quick="menuBgColor" type="color" /></label>
+              <label><span data-i18n="quick.menu.bg">Fondo menú</span>
+                <div class="color-alpha-wrap">
+                  <input id="menuBgColor" data-quick="menuBgColor" type="color" />
+                  <div class="alpha-row"><input id="menuBgColorAlpha" data-quick="menuBgColorAlpha" type="range" min="0" max="100" value="100" title="Opacidad" /><span class="alpha-value">100%</span></div>
+                </div>
+              </label>
               <label><span data-i18n="quick.menu.text">Texto menú</span> <input id="menuTextColor" data-quick="menuTextColor" type="color" /></label>
-              <label><span data-i18n="quick.menu.hoverBg">Fondo al pasar</span> <input id="menuHoverBgColor" data-quick="menuHoverBgColor" type="color" /></label>
+              <label><span data-i18n="quick.menu.hoverBg">Fondo al pasar</span>
+                <div class="color-alpha-wrap">
+                  <input id="menuHoverBgColor" data-quick="menuHoverBgColor" type="color" />
+                  <div class="alpha-row"><input id="menuHoverBgColorAlpha" data-quick="menuHoverBgColorAlpha" type="range" min="0" max="100" value="100" title="Opacidad" /><span class="alpha-value">100%</span></div>
+                </div>
+              </label>
               <label><span data-i18n="quick.menu.hoverText">Texto al pasar</span> <input id="menuHoverTextColor" data-quick="menuHoverTextColor" type="color" /></label>
-              <label><span data-i18n="quick.menu.activeBg">Fondo activo</span> <input id="menuActiveBgColor" data-quick="menuActiveBgColor" type="color" /></label>
+              <label><span data-i18n="quick.menu.activeBg">Fondo activo</span>
+                <div class="color-alpha-wrap">
+                  <input id="menuActiveBgColor" data-quick="menuActiveBgColor" type="color" />
+                  <div class="alpha-row"><input id="menuActiveBgColorAlpha" data-quick="menuActiveBgColorAlpha" type="range" min="0" max="100" value="100" title="Opacidad" /><span class="alpha-value">100%</span></div>
+                </div>
+              </label>
               <label><span data-i18n="quick.menu.activeText">Texto activo</span> <input id="menuActiveTextColor" data-quick="menuActiveTextColor" type="color" /></label>
             </div>
             <div class="group-card">
@@ -505,10 +533,20 @@
           <summary><span class="summary-icon material-symbols-outlined" aria-hidden="true">smart_button</span><span data-i18n="quick.content.summary">iDevices y botones</span></summary>
           <div class="section-content quick-grid">
             <div class="palette-compact">
-              <label><span data-i18n="quick.content.boxBg">Fondo iDevice</span> <input id="boxBgColor" data-quick="boxBgColor" type="color" /></label>
+              <label><span data-i18n="quick.content.boxBg">Fondo iDevice</span>
+                <div class="color-alpha-wrap">
+                  <input id="boxBgColor" data-quick="boxBgColor" type="color" />
+                  <div class="alpha-row"><input id="boxBgColorAlpha" data-quick="boxBgColorAlpha" type="range" min="0" max="100" value="100" title="Opacidad" /><span class="alpha-value">100%</span></div>
+                </div>
+              </label>
               <label><span data-i18n="quick.content.boxBorder">Borde iDevice</span> <input id="boxBorderColor" data-quick="boxBorderColor" type="color" /></label>
               <label><span data-i18n="quick.content.boxTitle">Título iDevice</span> <input id="boxTitleColor" data-quick="boxTitleColor" type="color" /></label>
-              <label><span data-i18n="quick.content.buttonBg">Botón fondo</span> <input id="buttonBgColor" data-quick="buttonBgColor" type="color" /></label>
+              <label><span data-i18n="quick.content.buttonBg">Botón fondo</span>
+                <div class="color-alpha-wrap">
+                  <input id="buttonBgColor" data-quick="buttonBgColor" type="color" />
+                  <div class="alpha-row"><input id="buttonBgColorAlpha" data-quick="buttonBgColorAlpha" type="range" min="0" max="100" value="100" title="Opacidad" /><span class="alpha-value">100%</span></div>
+                </div>
+              </label>
               <label><span data-i18n="quick.content.buttonText">Botón texto</span> <input id="buttonTextColor" data-quick="buttonTextColor" type="color" /></label>
             </div>
             <div class="inline-two">

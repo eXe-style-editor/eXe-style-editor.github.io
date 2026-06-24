@@ -7231,6 +7231,23 @@
      * @returns HTML content
      */
     extractTextAreaFieldContent(fieldInst) {
+      const raw = this.extractTextAreaFieldRawContent(fieldInst);
+      return raw ? this.decodeHtmlContent(raw) : "";
+    }
+    /**
+     * Extract the raw TextAreaField content WITHOUT decoding HTML entities.
+     *
+     * Use this when the value will be reduced to plain text (e.g. quiz option
+     * labels via stripHtmlTags). Decoding entities first turns an
+     * entity-encoded literal such as "A&lt;B" into live markup ("A<B"), which a
+     * later tag-strip then destroys ("A"). Keeping it raw lets stripHtmlTags
+     * remove the real <p> tags first and decode &lt;/&gt;/&amp; afterwards, so
+     * the literal "<" survives. See MultichoiceHandler / ScormTestHandler.
+     *
+     * @param fieldInst - TextAreaField instance element
+     * @returns Raw (still entity-encoded) content
+     */
+    extractTextAreaFieldRawContent(fieldInst) {
       if (!fieldInst) return "";
       const dict = this.getDirectChildByTagName(fieldInst, "dictionary");
       if (!dict) return "";
@@ -7244,7 +7261,7 @@
             if (valueEl && valueEl.tagName === "unicode") {
               const value = valueEl.getAttribute("value") || valueEl.textContent || "";
               if (value.trim()) {
-                return this.decodeHtmlContent(value);
+                return value;
               }
             }
           }
@@ -7833,8 +7850,8 @@
             const optDict = this.getDirectChildByTagName(optionField, "dictionary");
             if (!optDict) continue;
             const answerTextArea = this.findDictInstance(optDict, "answerTextArea");
-            const optionHtml = answerTextArea ? this.extractTextAreaFieldContent(answerTextArea) : "";
-            const optionText = this.stripHtmlTags(optionHtml);
+            const optionRaw = answerTextArea ? this.extractTextAreaFieldRawContent(answerTextArea) : "";
+            const optionText = this.stripHtmlTags(optionRaw);
             const isCorrect = this.findDictBoolValue(optDict, "isCorrect");
             const feedbackTextArea = this.findDictInstance(optDict, "feedbackTextArea");
             const optionFeedback = feedbackTextArea ? this.extractTextAreaFieldContent(feedbackTextArea) : "";
@@ -8521,8 +8538,7 @@
         const answerTextArea = this.findDictInstance(optDict, "answerTextArea");
         let answerText = "";
         if (answerTextArea) {
-          answerText = this.extractTextAreaFieldContent(answerTextArea);
-          answerText = this.stripHtmlTags(answerText);
+          answerText = this.stripHtmlTags(this.extractTextAreaFieldRawContent(answerTextArea));
         }
         const isCorrect = this.findDictBoolValue(optDict, "isCorrect");
         if (answerText) {
@@ -12288,6 +12304,28 @@
     }
   };
 
+  // src/shared/ids.ts
+  function generateId(prefix) {
+    if (!prefix) {
+      throw new Error("generateId: prefix is required");
+    }
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 11);
+    return `${prefix}-${timestamp}-${random}`;
+  }
+
+  // src/shared/export/utils/odeId.ts
+  function generateOdeId() {
+    const now = /* @__PURE__ */ new Date();
+    const timestamp = now.getFullYear().toString() + String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0") + String(now.getHours()).padStart(2, "0") + String(now.getMinutes()).padStart(2, "0") + String(now.getSeconds()).padStart(2, "0");
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let random = "";
+    for (let i = 0; i < 6; i++) {
+      random += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return timestamp + random;
+  }
+
   // src/shared/import/ElpxImporter.ts
   var ElpxImporter = class {
     /**
@@ -12542,6 +12580,16 @@
       this.logger.log("[ElpxImporter] Root-level pages to import:", rootNavStructures.length);
       const odeProperties = this.getElement(xmlDoc, "odeProperties");
       const metadataValues = this.extractMetadata(xmlDoc, odeProperties);
+      const odeResources = this.extractOdeResources(xmlDoc);
+      if (odeResources.odeId) {
+        metadataValues.odeIdentifier = odeResources.odeId;
+      }
+      if (odeResources.odeVersionId) {
+        metadataValues.odeVersionId = odeResources.odeVersionId;
+      }
+      if (odeResources.scormIdentifier) {
+        metadataValues.scormIdentifier = odeResources.scormIdentifier;
+      }
       const screenshot = this.extractScreenshotFromZip(zip);
       if (screenshot) {
         metadataValues.screenshot = screenshot;
@@ -12553,6 +12601,7 @@
       }
       const pageStructures = [];
       const idRemap = /* @__PURE__ */ new Map();
+      const usedIds = clearExisting ? /* @__PURE__ */ new Set() : this.collectExistingIds();
       this.buildFlatPageList(
         rootNavStructures,
         zip,
@@ -12561,7 +12610,8 @@
         parentId,
         orderOffset,
         idRemap,
-        true
+        true,
+        usedIds
       );
       this.logger.log(
         "[ElpxImporter] Built flat page list:",
@@ -12584,7 +12634,8 @@
             }
             this.logger.log("[ElpxImporter] Navigation cleared");
           }
-          if (odeProperties && clearExisting) {
+          const hasStableIdentifiers = Boolean(metadataValues.odeIdentifier || metadataValues.odeVersionId);
+          if (clearExisting && (odeProperties || hasStableIdentifiers)) {
             this.logger.log("[ElpxImporter] Setting metadata...");
             this.setMetadata(metadata, metadataValues);
             this.logger.log("[ElpxImporter] Metadata set");
@@ -12696,10 +12747,10 @@
       const pageStructures = [];
       const pageIdRemap = /* @__PURE__ */ new Map();
       for (const legacyPage of legacyPages) {
-        pageIdRemap.set(legacyPage.id, this.generateId("page"));
+        pageIdRemap.set(legacyPage.id, generateId("page"));
       }
       for (const legacyPage of legacyPages) {
-        const pageId = pageIdRemap.get(legacyPage.id) || this.generateId("page");
+        const pageId = pageIdRemap.get(legacyPage.id) || generateId("page");
         const parentId = legacyPage.parent_id === null ? rootParentId : pageIdRemap.get(legacyPage.parent_id) ?? rootParentId;
         const order = legacyPage.parent_id === null ? rootOrderOffset + legacyPage.position : legacyPage.position;
         const pageData = {
@@ -12726,7 +12777,7 @@
      * Convert legacy block to BlockData format
      */
     convertLegacyBlockToBlockData(legacyBlock) {
-      const blockId = this.generateId("block");
+      const blockId = generateId("block");
       const blockData = {
         id: blockId,
         blockId,
@@ -12747,7 +12798,7 @@
      * Convert legacy iDevice to ComponentData format
      */
     convertLegacyIdeviceToComponentData(legacyIdevice) {
-      const componentId = this.generateId("idevice");
+      const componentId = generateId("idevice");
       let htmlView = legacyIdevice.htmlView || "";
       htmlView = this.normalizeTextIdeviceHtml(legacyIdevice.type, htmlView);
       if (legacyIdevice.feedbackHtml && !this.htmlHasFeedback(htmlView)) {
@@ -12816,6 +12867,8 @@
       metadata.set("globalFont", "default");
       metadata.set("extraHeadContent", legacyMeta.extraHeadContent);
       metadata.set("footer", legacyMeta.footer);
+      metadata.set("odeIdentifier", generateOdeId());
+      metadata.set("odeVersionId", generateOdeId());
     }
     /**
      * Convert Uint8Array to base64 string
@@ -12859,6 +12912,27 @@
         this.logger.warn("[ElpxImporter] Failed to read screenshot.png:", error);
         return void 0;
       }
+    }
+    /**
+     * Extract <odeResources> entries from a v4 content.xml document.
+     * Returns an empty object when the section is missing or empty so callers
+     * can fall back to fresh identifiers without crashing.
+     */
+    extractOdeResources(xmlDoc) {
+      const result = {};
+      const container = this.getElement(xmlDoc, "odeResources");
+      if (!container) return result;
+      const resources = this.getElements(container, "odeResource");
+      for (const res of resources) {
+        const keyEl = this.getElement(res, "key");
+        const valEl = this.getElement(res, "value");
+        const key = keyEl?.textContent?.trim();
+        const value = valEl?.textContent?.trim();
+        if (key && value) {
+          result[key] = value;
+        }
+      }
+      return result;
     }
     /**
      * Extract metadata from XML
@@ -12927,20 +13001,30 @@
       if (values.screenshot) {
         metadata.set("screenshot", values.screenshot);
       }
+      if (values.odeIdentifier) {
+        metadata.set("odeIdentifier", values.odeIdentifier);
+      }
+      if (values.odeVersionId) {
+        metadata.set("odeVersionId", values.odeVersionId);
+      }
+      if (values.scormIdentifier) {
+        metadata.set("scormIdentifier", values.scormIdentifier);
+      }
     }
     /**
      * Build a flat list of all pages (recursive helper)
      */
-    buildFlatPageList(navNodes, zip, allNavStructures, flatList, parentId, orderOffset, idRemap, isRootLevel) {
+    buildFlatPageList(navNodes, zip, allNavStructures, flatList, parentId, orderOffset, idRemap, isRootLevel, usedIds) {
       let siblingOrder = 0;
       for (const navNode of navNodes) {
         const originalPageId = this.getPageId(navNode);
-        const newPageId = this.generateId("page");
-        if (originalPageId) {
+        const newPageId = originalPageId && !usedIds.has(originalPageId) ? originalPageId : generateId("page");
+        usedIds.add(newPageId);
+        if (originalPageId && newPageId !== originalPageId) {
           idRemap.set(originalPageId, newPageId);
         }
         const calculatedOrder = isRootLevel ? orderOffset + siblingOrder : siblingOrder;
-        const pageData = this.buildPageData(navNode, zip, parentId, newPageId, calculatedOrder);
+        const pageData = this.buildPageData(navNode, zip, parentId, newPageId, calculatedOrder, usedIds);
         if (pageData) {
           flatList.push(pageData);
           siblingOrder++;
@@ -12961,7 +13045,8 @@
               newPageId,
               0,
               idRemap,
-              false
+              false,
+              usedIds
             );
           }
         }
@@ -12970,7 +13055,7 @@
     /**
      * Build plain JavaScript data structure from XML
      */
-    buildPageData(navNode, zip, parentId, newPageId, calculatedOrder) {
+    buildPageData(navNode, zip, parentId, newPageId, calculatedOrder, usedIds) {
       const pageId = newPageId;
       const pageName = this.getPageName(navNode);
       const order = calculatedOrder;
@@ -12991,7 +13076,7 @@
         return this.getPagOrder(a) - this.getPagOrder(b);
       });
       for (const pagNode of sortedPagStructures) {
-        const blockData = this.buildBlockData(pagNode, zip);
+        const blockData = this.buildBlockData(pagNode, zip, usedIds);
         if (blockData) {
           pageData.blocks.push(blockData);
         }
@@ -13001,8 +13086,10 @@
     /**
      * Build plain JavaScript data structure for a block
      */
-    buildBlockData(pagNode, zip) {
-      const blockId = pagNode.getAttribute("odePagStructureId") || this.getTextContent(pagNode, "odeBlockId") || this.generateId("block");
+    buildBlockData(pagNode, zip, usedIds) {
+      const originalBlockId = pagNode.getAttribute("odePagStructureId") || this.getTextContent(pagNode, "odeBlockId") || null;
+      const blockId = originalBlockId && !usedIds.has(originalBlockId) ? originalBlockId : generateId("block");
+      usedIds.add(blockId);
       const blockName = pagNode.getAttribute("blockName") || this.getTextContent(pagNode, "blockName") || "";
       const order = this.getPagOrder(pagNode);
       const iconName = pagNode.getAttribute("iconName") || this.getTextContent(pagNode, "iconName") || "";
@@ -13022,7 +13109,7 @@
         return this.getComponentOrder(a) - this.getComponentOrder(b);
       });
       for (const compNode of sortedComponents) {
-        const compData = this.buildComponentData(compNode, zip);
+        const compData = this.buildComponentData(compNode, zip, usedIds);
         if (compData) {
           blockData.components.push(compData);
         }
@@ -13032,8 +13119,10 @@
     /**
      * Build plain JavaScript data structure for a component
      */
-    buildComponentData(compNode, _zip) {
-      const componentId = compNode.getAttribute("odeComponentId") || this.getTextContent(compNode, "odeIdeviceId") || this.generateId("idevice");
+    buildComponentData(compNode, _zip, usedIds) {
+      const originalComponentId = compNode.getAttribute("odeComponentId") || this.getTextContent(compNode, "odeIdeviceId") || null;
+      const componentId = originalComponentId && !usedIds.has(originalComponentId) ? originalComponentId : generateId("idevice");
+      usedIds.add(componentId);
       let ideviceType = compNode.getAttribute("odeIdeviceTypeDirName") || compNode.getAttribute("odeIdeviceTypeName") || this.getTextContent(compNode, "odeIdeviceTypeName") || "FreeTextIdevice";
       if (LEGACY_TYPE_ALIASES[ideviceType]) {
         ideviceType = LEGACY_TYPE_ALIASES[ideviceType];
@@ -13053,7 +13142,10 @@
       };
       const htmlViewNode = this.getElement(compNode, "htmlView");
       if (htmlViewNode) {
-        let htmlContent = this.decodeHtmlContent(htmlViewNode.textContent || "") || "";
+        let htmlContent = this.getCdataAwareTextContent(htmlViewNode);
+        if (!this.hasCdataChild(htmlViewNode)) {
+          htmlContent = this.decodeHtmlContent(htmlContent);
+        }
         htmlContent = this.normalizeTextIdeviceHtml(ideviceType, htmlContent);
         if (this.assetHandler && this.assetMap.size > 0 && htmlContent) {
           try {
@@ -13088,7 +13180,7 @@
             this.logger.warn(`[ElpxImporter] Invalid JSON for ${componentId}, using empty object`);
             props = {};
           }
-          props = this.decodeHtmlEntitiesInObject(props);
+          props = this.decodeLegacyEncodedHtmlInObject(props);
           if (this.assetHandler && this.assetMap.size > 0 && props && typeof props === "object") {
             try {
               props = this.convertAssetPathsInObject(props);
@@ -13101,6 +13193,9 @@
           }
           if (typeof props.htmlView === "string") {
             props.htmlView = stripLegacyExeTextWrapper(props.htmlView);
+          }
+          if (originalComponentId && originalComponentId !== componentId && typeof props.ideviceId === "string" && props.ideviceId === originalComponentId) {
+            props.ideviceId = componentId;
           }
           compData.properties = props;
         } catch (e) {
@@ -13136,19 +13231,32 @@
       if (!text) return "";
       return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
     }
-    decodeHtmlEntitiesInObject(obj) {
+    hasCdataChild(element) {
+      return Array.from(element.childNodes || []).some((child) => child.nodeType === 4);
+    }
+    getCdataAwareTextContent(element) {
+      const childNodes = Array.from(element.childNodes || []);
+      if (childNodes.some((child) => child.nodeType === 4)) {
+        return childNodes.map((child) => child.nodeValue || "").join("");
+      }
+      return element.textContent || "";
+    }
+    decodeLegacyEncodedHtmlInObject(obj) {
       if (typeof obj === "string") {
-        return this.decodeHtmlContent(obj);
+        if (/&lt;div\b/i.test(obj) && /exe-text/i.test(obj)) {
+          return this.decodeHtmlContent(obj);
+        }
+        return obj;
       }
       if (Array.isArray(obj)) {
-        return obj.map((item) => this.decodeHtmlEntitiesInObject(item));
+        return obj.map((item) => this.decodeLegacyEncodedHtmlInObject(item));
       }
       if (!obj || typeof obj !== "object") {
         return obj;
       }
       const result = {};
       for (const [key, value] of Object.entries(obj)) {
-        result[key] = this.decodeHtmlEntitiesInObject(value);
+        result[key] = this.decodeLegacyEncodedHtmlInObject(value);
       }
       return result;
     }
@@ -13305,8 +13413,9 @@
      */
     remapInternalPageLinks(pageStructures, idRemap) {
       if (idRemap.size === 0) return;
-      const escapedIds = Array.from(idRemap.keys()).map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-      const pattern = new RegExp(`(exe-node:)(${escapedIds.join("|")})(#[^"'\\s]*)?`, "g");
+      const sortedKeys = Array.from(idRemap.keys()).sort((a, b) => b.length - a.length);
+      const escapedIds = sortedKeys.map((id) => id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+      const pattern = new RegExp(`(exe-node:)(${escapedIds.join("|")})(?![A-Za-z0-9_-])(#[^"'\\s]*)?`, "g");
       const replacer = (_m, prefix, oldId, fragment) => {
         const newId = idRemap.get(oldId) ?? oldId;
         return `${prefix}${newId}${fragment ?? ""}`;
@@ -13596,12 +13705,46 @@
       return el ? el.textContent : null;
     }
     /**
-     * Generate a unique ID
+     * Collect every page, block and component (iDevice) id currently present in
+     * the Y.Doc navigation. Used by merge-mode v4 imports to detect collisions
+     * with the existing document before deciding to preserve or regenerate ids.
+     *
+     * On a clean v4 import (clearExisting=true) the navigation will be wiped
+     * inside the import transaction, so the caller starts with an empty Set
+     * instead of invoking this scan.
      */
-    generateId(prefix) {
-      const timestamp = Date.now().toString(36);
-      const random = Math.random().toString(36).substring(2, 11);
-      return `${prefix}-${timestamp}-${random}`;
+    collectExistingIds() {
+      const ids = /* @__PURE__ */ new Set();
+      const navigation = this.getNavigation();
+      for (let i = 0; i < navigation.length; i++) {
+        const page = navigation.get(i);
+        if (!page) continue;
+        const pageIdValue = page.get("id");
+        if (typeof pageIdValue === "string") ids.add(pageIdValue);
+        const pageIdMirror = page.get("pageId");
+        if (typeof pageIdMirror === "string") ids.add(pageIdMirror);
+        const blocks = page.get("blocks");
+        if (!blocks || typeof blocks.length !== "number") continue;
+        for (let j = 0; j < blocks.length; j++) {
+          const block = blocks.get(j);
+          if (!block) continue;
+          const blockIdValue = block.get("id");
+          if (typeof blockIdValue === "string") ids.add(blockIdValue);
+          const blockIdMirror = block.get("blockId");
+          if (typeof blockIdMirror === "string") ids.add(blockIdMirror);
+          const components = block.get("components");
+          if (!components || typeof components.length !== "number") continue;
+          for (let k = 0; k < components.length; k++) {
+            const comp = components.get(k);
+            if (!comp) continue;
+            const compIdValue = comp.get("id");
+            if (typeof compIdValue === "string") ids.add(compIdValue);
+            const compIdMirror = comp.get("ideviceId");
+            if (typeof compIdMirror === "string") ids.add(compIdMirror);
+          }
+        }
+      }
+      return ids;
     }
     /**
      * Sanitize an ID string

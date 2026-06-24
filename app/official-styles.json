@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-23T04:33:57.960Z",
+  "generatedAt": "2026-06-24T15:59:00.982Z",
   "styles": [
     {
       "id": "base",
@@ -130,6 +130,7 @@
         "icons/think.svg",
         "icons/video.svg",
         "img/arrow_down_menu.svg",
+        "img/arrow_down_white.svg",
         "img/arrow_down.svg",
         "img/arrow.svg",
         "img/back_arrow.svg",

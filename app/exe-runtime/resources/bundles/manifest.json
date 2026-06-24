@@ -1,102 +1,110 @@
 {
   "buildVersion": "v0.0.0-alpha",
-  "builtAt": "2026-04-30T07:26:28.082Z",
+  "builtAt": "2026-06-09T10:43:11.684Z",
   "themes": {
+    "flux": {
+      "files": 76,
+      "size": 209700,
+      "hash": "a981ba3bb7bae3f5c8c976db8b5918a38337676a60aed8deb15920e96ff3711f"
+    },
     "nova": {
       "files": 74,
-      "size": 140993,
-      "hash": "9e1231a006ee7a1b425eda2bab0d4564b1af0c91b1d757e01ff63fa8971818d0"
-    },
-    "zen": {
-      "files": 80,
-      "size": 1173572,
-      "hash": "c416f0ee901d78535fd177488cead4a546e33823d98b4e01e6ee033eb6d4d44e"
-    },
-    "universal": {
-      "files": 93,
-      "size": 147937,
-      "hash": "033e74d8e7e6585846a134c3f62231cceef48e6fa204708936ac15f654a1e2e7"
-    },
-    "base": {
-      "files": 56,
-      "size": 126503,
-      "hash": "90a1dfa9a7679558aa5daeffdb6b0d2dccdad40b1b1e1ec9e8763b8340159228"
-    },
-    "flux": {
-      "files": 75,
-      "size": 356616,
-      "hash": "fbdef8c9c57949d0cf827374b6cf196f79a09110c46ea92cf7826b9af65a5b3e"
+      "size": 140925,
+      "hash": "394c618263265e0d35e396917bbd977fb46145eb62002192ee9b9cd8e7bfd073"
     },
     "neo": {
       "files": 87,
-      "size": 1167300,
-      "hash": "08d2ce78b345b0040d868d2319efdd151b1053604717ec4aeb534dd747fc191e"
+      "size": 815172,
+      "hash": "6497a80276d0ee1776e8a22838928401876c232bc8ab5ee146967af22397c084"
+    },
+    "zen": {
+      "files": 80,
+      "size": 1172615,
+      "hash": "35d3c5a35948dcc8babfbdbb1812f99b4bb4217433d2d82263f47a9d226a425c"
+    },
+    "base": {
+      "files": 56,
+      "size": 81002,
+      "hash": "cfd14a9bf08e12a490bd4feb525a33ce48a4879418023c1fb653a5fa2bd13c40"
+    },
+    "universal": {
+      "files": 93,
+      "size": 139386,
+      "hash": "2aadc6a6719461fd16680bba3c9080315912633ce5f8659d2388d1d99337e61b"
     }
   },
   "idevices": {
-    "word-search": 25,
-    "beforeafter": 18,
-    "text": 5,
-    "quick-questions": 26,
-    "classify": 22,
-    "dragdrop": 18,
-    "udl-content": 9,
-    "interactive-video": 9,
-    "magnifier": 8,
-    "download-source-file": 5,
-    "puzzle": 26,
-    "digcompedu": 4,
-    "form": 13,
-    "mathproblems": 18,
+    "three-sixty-viewer": 6,
     "hidden-image": 15,
-    "crossword": 23,
-    "progress-report": 11,
-    "geogebra-activity": 7,
-    "identify": 24,
-    "challenge": 62,
-    "external-website": 3,
-    "padlock": 13,
-    "mathematicaloperations": 18,
-    "relate": 22,
-    "complete": 17,
-    "quick-questions-multiple-choice": 28,
-    "az-quiz-game": 31,
-    "guess": 31,
     "trueorfalse": 19,
-    "map": 158,
-    "flipcards": 22,
-    "checklist": 10,
-    "discover": 26,
-    "trivial": 42,
-    "scrambled-list": 14,
-    "image-gallery": 7,
-    "rubric": 5,
-    "sort": 26,
-    "casestudy": 5,
+    "mathproblems": 18,
+    "az-quiz-game": 31,
+    "padlock": 13,
     "example": 4,
+    "trivial": 42,
+    "flipcards": 22,
+    "udl-content": 9,
+    "magnifier": 8,
+    "relate": 22,
+    "image-gallery": 7,
+    "3dmol": 31,
+    "puzzle": 26,
+    "external-website": 3,
+    "three-d-viewer": 10,
+    "dragdrop": 18,
+    "rubric": 5,
+    "adaptative-quiz": 14,
+    "progress-report": 11,
+    "discover": 26,
+    "slide": 4,
+    "lomloe": 3,
+    "text": 5,
+    "geogebra-activity": 7,
     "periodic-table": 14,
-    "select-media-files": 25,
-    "quick-questions-video": 27
+    "crossword": 23,
+    "markdown-text": 4,
+    "checklist": 10,
+    "mathematicaloperations": 18,
+    "download-source-file": 5,
+    "quick-questions": 26,
+    "digcompedu": 4,
+    "classify": 22,
+    "challenge": 62,
+    "quick-questions-video": 27,
+    "form": 13,
+    "guess": 31,
+    "electrical-circuits": 23,
+    "identify": 24,
+    "beforeafter": 18,
+    "interactive-video": 9,
+    "casestudy": 5,
+    "select-media-files": 26,
+    "complete": 17,
+    "word-search": 25,
+    "quick-questions-multiple-choice": 28,
+    "scrambled-list": 14,
+    "sort": 26,
+    "map": 158
   },
   "idevicesBundle": {
-    "count": 43,
-    "files": 915,
-    "size": 4332741,
-    "hash": "31c1f168364664ec23b7a44d57d18fe7e9cc9d6cb0567f32e466f15be805fb18"
+    "count": 51,
+    "files": 1011,
+    "size": 4125502,
+    "hash": "33b5ad3c08d7b2a24ecb1bf885c55820704826c9595e1190dc5af8248e006419"
   },
   "libs": {
     "files": 9,
-    "size": 308897,
-    "hash": "9f2ca86db7ab30443d6e8d0380beef460bf833540f7cf11cf178d579d660cb87"
+    "size": 309498,
+    "hash": "502b1f7c1ef193fb0ad6e968e176eeb0f7895994bf20519b954a3c5823495434"
   },
   "common": {
     "files": 132,
-    "size": 2710901,
-    "hash": "12b33b4bb32a893a39f882aaacabb9b3bc840dd131b6748025bb8c3ad84443fd"
+    "size": 2728084,
+    "hash": "b65311c2d960abbff1da26e81dba0c8c58ea15cb310e952cf18c151e4eb12bd5"
   },
   "contentCss": {
     "files": 4,
-    "size": 44278,
-    "hash": "2358c22f6d83b9af669cb2e00456e0a9e2878c71976db12668e582037a534b4f"
+    "size": 44634,
+    "hash": "b84c1f4b4f922266b37aa7da3283cf43a4973784b7b7a6a50c2a47b1953f2e44"
   }
 }

@@ -37,7 +37,8 @@
           // Display: $$...$$ (may span multiple lines with <br>)
           { regex: /\$\$([\s\S]*?)\$\$/g, display: "block" },
           // Block: \begin{...}...\end{...} (may span multiple lines with <br>)
-          { regex: /\\begin\{[^}]+\}[\s\S]*?\\end\{[^}]+\}/g, display: "block" },
+          // Exclude TikZ/circuitikz environments (handled by TikZJax, not MathJax)
+          { regex: /\\begin\{(?!(?:tikzpicture|circuitikz)\})[^}]+\}[\s\S]*?\\end\{[^}]+\}/g, display: "block" },
           // Inline: \(...\) (typically single line but support multi)
           { regex: /\\\([\s\S]*?\\\)/g, display: "inline" },
           // Bare \ref{...} and \eqref{...} - used in text mode to reference equations
@@ -814,7 +815,12 @@
       "trueorfalse",
       "true-or-false",
       "scrambled-list",
-      "magnifier"
+      "magnifier",
+      "three-sixty-viewer",
+      "adaptative-quiz",
+      "slide",
+      "three-d-viewer",
+      "markdown-text"
     ];
     const isJson = jsonIdevices.includes(cssClass) || jsonIdevices.includes(normalized);
     return {
@@ -827,7 +833,9 @@
     checklist: ["html2canvas.js"],
     "progress-report": ["html2canvas.js"],
     "select-media-files": ["mansory-jq.js"],
-    "image-gallery": ["simple-lightbox.min.js"]
+    "image-gallery": ["simple-lightbox.min.js"],
+    "three-sixty-viewer": ["three.min.js", "OrbitControls.js"],
+    "three-d-viewer": ["model-viewer.min.js", "three.module.min.js", "STLLoader.js", "OrbitControls.js"]
   };
   var IDEVICE_CSS_DEPENDENCIES = {
     "image-gallery": ["simple-lightbox.min.css"]
@@ -836,10 +844,19 @@
     const mainFile = `${typeName}${extension}`;
     if (extension === ".js") {
       const dependencies = IDEVICE_JS_DEPENDENCIES[typeName] || [];
-      return [mainFile, ...dependencies];
+      return [...dependencies, mainFile];
     }
     const cssDependencies = IDEVICE_CSS_DEPENDENCIES[typeName] || [];
-    return [mainFile, ...cssDependencies];
+    return [...cssDependencies, mainFile];
+  }
+  var IDEVICE_JS_MODULES = {
+    "three-d-viewer": ["three.module.min.js", "STLLoader.js", "OrbitControls.js"]
+  };
+  function isIdeviceJsModule(typeName, filename) {
+    if (filename.endsWith(".mjs")) return true;
+    if (/\.module(\.[^.]+)*\.js$/i.test(filename)) return true;
+    if (IDEVICE_JS_MODULES[typeName]?.includes(filename)) return true;
+    return false;
   }
 
   // src/shared/export/constants.ts
@@ -859,10 +876,12 @@
       files: ["exe_games/exe_games.js", "exe_games/exe_games.css"]
     },
     // Code highlighting
+    // Matches the legacy TinyMCE class (`highlighted-code`) and the
+    // `language-<lang>` classes produced by Showdown for fenced code blocks.
     {
       name: "exe_highlighter",
-      type: "class",
-      pattern: "highlighted-code",
+      type: "regex",
+      pattern: /class\s*=\s*["'][^"']*\b(?:highlighted-code|language-[a-z0-9_+-]+)\b/i,
       files: ["exe_highlighter/exe_highlighter.js", "exe_highlighter/exe_highlighter.css"]
     },
     // Lightbox for images
@@ -1035,6 +1054,7 @@
       files: ["fflate/fflate.umd.js", "exe_elpx_download/exe_elpx_download.js"]
     }
   ];
+  var ELPX_DOWNLOAD_ONCLICK = "try{var p=window.parent;if(p&&p!==window&&p.eXeLearning&&p.eXeLearning.app){p.postMessage({type:'exe-download-elpx'},'*');return false;}}catch(e){}if(typeof downloadElpx==='function')downloadElpx();return false;";
   var BASE_LIBRARIES = [
     // jQuery
     "jquery/jquery.min.js",
@@ -1693,6 +1713,14 @@
       category: "internal"
     },
     {
+      key: "odeVersionId",
+      xmlKey: "odeVersionId",
+      type: "string",
+      defaultValue: "",
+      excludeFromXml: true,
+      category: "internal"
+    },
+    {
       key: "createdAt",
       xmlKey: "createdAt",
       type: "string",
@@ -1747,10 +1775,22 @@
     return String(value ?? "");
   }
 
+  // src/shared/export/utils/odeId.ts
+  function generateOdeId() {
+    const now = /* @__PURE__ */ new Date();
+    const timestamp = now.getFullYear().toString() + String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0") + String(now.getHours()).padStart(2, "0") + String(now.getMinutes()).padStart(2, "0") + String(now.getSeconds()).padStart(2, "0");
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let random = "";
+    for (let i = 0; i < 6; i++) {
+      random += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return timestamp + random;
+  }
+
   // src/shared/export/generators/OdeXmlGenerator.ts
   function generateOdeXml(meta, pages, options) {
     const odeId = options?.odeId || meta.odeIdentifier || generateOdeId();
-    const versionId = options?.versionId || generateOdeId();
+    const versionId = options?.versionId || meta.odeVersionId || generateOdeId();
     const includeDoctype = options?.includeDoctype ?? true;
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     if (includeDoctype) {
@@ -1759,7 +1799,12 @@
     }
     xml += '<ode xmlns="http://www.intef.es/xsd/ode" version="2.0">\n';
     xml += generateUserPreferencesXml(meta);
-    xml += generateOdeResourcesXml(odeId, versionId, normalizeExeVersion(meta.exelearningVersion));
+    xml += generateOdeResourcesXml(
+      odeId,
+      versionId,
+      normalizeExeVersion(meta.exelearningVersion),
+      meta.scormIdentifier
+    );
     xml += generateOdePropertiesXml(meta);
     xml += "<odeNavStructures>\n";
     for (let i = 0; i < pages.length; i++) {
@@ -1782,11 +1827,14 @@
   </userPreference>
 `;
   }
-  function generateOdeResourcesXml(odeId, versionId, exeVersion) {
+  function generateOdeResourcesXml(odeId, versionId, exeVersion, scormIdentifier) {
     let xml = "<odeResources>\n";
     xml += generateOdeResourceEntry("odeId", odeId);
     xml += generateOdeResourceEntry("odeVersionId", versionId);
     xml += generateOdeResourceEntry("exe_version", exeVersion);
+    if (scormIdentifier) {
+      xml += generateOdeResourceEntry("scormIdentifier", scormIdentifier);
+    }
     xml += "</odeResources>\n";
     return xml;
   }
@@ -1950,16 +1998,6 @@
             </odeComponentsProperty>
 `;
   }
-  function generateOdeId() {
-    const now = /* @__PURE__ */ new Date();
-    const timestamp = now.getFullYear().toString() + String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0") + String(now.getHours()).padStart(2, "0") + String(now.getMinutes()).padStart(2, "0") + String(now.getSeconds()).padStart(2, "0");
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let random = "";
-    for (let i = 0; i < 6; i++) {
-      random += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return timestamp + random;
-  }
   function escapeXml(str) {
     if (!str) return "";
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
@@ -2013,7 +2051,12 @@
         extraHeadContent: meta.get("extraHeadContent") || void 0,
         footer: meta.get("footer") || void 0,
         // Project screenshot/thumbnail
-        screenshot: meta.get("screenshot") || void 0
+        screenshot: meta.get("screenshot") || void 0,
+        // Stable identifiers (#1784, #1785) -- preserved across import/export so
+        // that content.xml diffs stay clean and LMS tracking survives SCORM re-uploads.
+        odeIdentifier: meta.get("odeIdentifier") || void 0,
+        odeVersionId: meta.get("odeVersionId") || void 0,
+        scormIdentifier: meta.get("scormIdentifier") || void 0
       };
     }
     /**
@@ -4385,7 +4428,8 @@ ${contentHtml}
           seen.add(typeName);
           const jsFiles = getIdeviceExportFiles(typeName, ".js");
           for (const jsFile of jsFiles) {
-            scripts.push(`<script src="${basePath}idevices/${typeName}/${jsFile}"><\/script>`);
+            const typeAttr = isIdeviceJsModule(typeName, jsFile) ? ' type="module"' : "";
+            scripts.push(`<script${typeAttr} src="${basePath}idevices/${typeName}/${jsFile}"><\/script>`);
           }
         }
       }
@@ -4434,9 +4478,10 @@ ${contentHtml}
           const jsFiles = getIdeviceExportFiles(typeName, ".js");
           for (const jsFile of jsFiles) {
             const src = `${basePath}idevices/${typeName}/${jsFile}`;
+            const typeAttr = isIdeviceJsModule(typeName, jsFile) ? ' type="module"' : "";
             scripts.push({
               src,
-              tag: `<script src="${src}"><\/script>`
+              tag: `<script${typeAttr} src="${src}"><\/script>`
             });
           }
         }
@@ -4556,7 +4601,7 @@ ${contentHtml}
       });
       const searchBoxHtml = addSearchBox ? `<div id="exe-client-search" data-block-order-string="Caja %e" data-no-results-string="Sin resultados.">
 </div>` : "";
-      const madeWithExeHtml = addExeLink ? this.renderMadeWithEXe() : "";
+      const madeWithExeHtml = addExeLink ? this.renderMadeWithEXe(language, options.navLabels) : "";
       const pageFilenameMap = options.pageFilenameMap;
       const navHtml = hideNavigation ? "" : this.renderNavigation(allPages, page.id, basePath, pageFilenameMap);
       const navButtonsHtml = hideNavButtons ? "" : this.renderNavButtons(page, allPages, basePath, options.navLabels, pageFilenameMap);
@@ -4966,10 +5011,7 @@ ${extraHeadScripts}`;
       if (!content || !content.includes("exe-package:elp")) {
         return content;
       }
-      let result = content.replace(
-        /href="exe-package:elp"/g,
-        `href="#" onclick="if(typeof downloadElpx==='function')downloadElpx();return false;"`
-      );
+      let result = content.replace(/href="exe-package:elp"/g, `href="#" onclick="${ELPX_DOWNLOAD_ONCLICK}"`);
       const safeTitle = this.escapeHtml(projectTitle);
       result = result.replace(/download="exe-package:elp-name"/g, `download="${safeTitle}.elpx"`);
       return result;
@@ -5041,17 +5083,22 @@ ${extraHeadScripts}`;
       const licenseText = formatLicenseText(license);
       const translatedLicenseText = navLabels?.license || trans(licenseText, {}, language);
       const licenseClass = getLicenseClass(license);
+      const licenseLabel = navLabels?.licenseLabel || trans("License", {}, language);
       const licenseContent = licenseUrl ? `<a href="${licenseUrl}" class="license">${translatedLicenseText}</a>` : `<span class="license">${translatedLicenseText}</span>`;
-      return `<footer id="siteFooter"><div id="siteFooterContent"> <div id="packageLicense" class="${licenseClass}"> <p> <span class="license-label">Licencia: </span>${licenseContent}</p>
+      return `<footer id="siteFooter"><div id="siteFooterContent"> <div id="packageLicense" class="${licenseClass}"> <p> <span class="license-label">${licenseLabel}: </span>${licenseContent}</p>
 </div>
 ${userFooterHtml}</div></footer>`;
     }
     /**
-     * Render "Made with eXeLearning" credit
+     * Render "Made with eXeLearning" credit in the document language.
+     * @param language - Document language code (e.g. 'es', 'en')
+     * @param navLabels - Pre-translated labels (browser-side exports supply these via fetchNavLabels)
      * @returns Made with eXe HTML
      */
-    renderMadeWithEXe() {
-      return `<p id="made-with-eXe"> <a href="https://exelearning.net/" target="_blank" rel="noopener"> <span>Creado con eXeLearning <span>(nueva ventana)</span></span></a></p>`;
+    renderMadeWithEXe(language = "en", navLabels) {
+      const madeWithText = navLabels?.madeWith || trans("Made with eXeLearning", {}, language);
+      const newWindowText = navLabels?.newWindow || trans("New window", {}, language);
+      return `<p id="made-with-eXe"> <a href="https://exelearning.net/" target="_blank" rel="noopener"> <span>${madeWithText} <span>(${newWindowText})</span></span></a></p>`;
     }
     /**
      * Render license div (inside main, before pagination)
@@ -5240,9 +5287,9 @@ ${addMathJax ? `<script src="libs/exe_math/tex-mml-svg.js"> <\/script>` : ""}
 <p class="package-subtitle">${this.escapeHtml(projectSubtitle)}</p>` : ""}</header>
 ${contentHtml}
 </main>
-${this.renderFooterSection({ license, licenseUrl, userFooterContent, navLabels })}
+${this.renderFooterSection({ license, licenseUrl, userFooterContent, language, navLabels })}
 </div>
-${addExeLink ? this.renderMadeWithEXe() : ""}
+${addExeLink ? this.renderMadeWithEXe(language, navLabels) : ""}
 </body>
 </html>`;
     }
@@ -5672,7 +5719,10 @@ ${addExeLink ? this.renderMadeWithEXe() : ""}
         previous: translations.get("Previous") || "Previous",
         next: translations.get("Next") || "Next",
         page: translations.get("Page") || "Page",
-        license: translatedLicense
+        license: translatedLicense,
+        licenseLabel: translations.get("License") || "License",
+        madeWith: translations.get("Made with eXeLearning") || "Made with eXeLearning",
+        newWindow: translations.get("New window") || "New window"
       };
     }
     // =========================================================================
@@ -5819,6 +5869,54 @@ ${addExeLink ? this.renderMadeWithEXe() : ""}
       const random = Math.random().toString(36).substring(2, 8);
       return `${prefix}${timestamp}${random}`.toUpperCase();
     }
+    /**
+     * Stable identifier used in SCORM/IMS manifests and LOM catalog/entry.
+     *
+     * Derives from the project's odeIdentifier so the LMS treats updated
+     * re-uploads as the same course (preserving learner tracking). Honours
+     * an explicit `scormIdentifier` override from project metadata.
+     *
+     * Resolution order:
+     * 1. `meta.scormIdentifier` if set (user override -- used verbatim).
+     * 2. `'eXe-MANIFEST-' + meta.odeIdentifier` (default -- shares root with content.xml).
+     * 3. `'eXe-MANIFEST-' + generateOdeId()` (fallback for legacy projects).
+     *
+     * The result is memoized per exporter instance: a single export call must
+     * always observe the same manifest identifier so the manifest, the
+     * organization identifier and the LOM catalog/entry stay consistent.
+     *
+     * The returned string is the FINAL `manifest@identifier` value. Manifest
+     * generators must use it as-is (i.e. they must NOT prepend their own
+     * `eXe-MANIFEST-` prefix).
+     *
+     * Related: exelearning/exelearning#1785.
+     */
+    getManifestIdentifier() {
+      if (this._manifestIdentifier !== void 0) {
+        return this._manifestIdentifier;
+      }
+      const meta = this.getMetadata();
+      if (meta.scormIdentifier) {
+        this._manifestIdentifier = meta.scormIdentifier;
+      } else if (meta.odeIdentifier) {
+        this._manifestIdentifier = "eXe-MANIFEST-" + meta.odeIdentifier;
+      } else {
+        this._manifestIdentifier = "eXe-MANIFEST-" + generateOdeId();
+      }
+      return this._manifestIdentifier;
+    }
+    /**
+     * Bare project identifier (without the `eXe-MANIFEST-` prefix).
+     *
+     * Used for the manifest `organization@identifier` (`eXe-<bareId>`) and
+     * for the LOM `catalog/entry` (`ODE-<bareId>`) so a single project
+     * identity flows through every artifact in the export.
+     */
+    getBareProjectIdentifier() {
+      const fullId = this.getManifestIdentifier();
+      const PREFIX = "eXe-MANIFEST-";
+      return fullId.startsWith(PREFIX) ? fullId.slice(PREFIX.length) : fullId;
+    }
     // =========================================================================
     // Asset Iteration
     // =========================================================================
@@ -5873,18 +5971,13 @@ ${addExeLink ? this.renderMadeWithEXe() : ""}
      * Add assets to ZIP with content/resources/ prefix
      * Uses folderPath-based structure for cleaner exports
      *
-     * Each asset is written to the resolved export path (the friendly filename
-     * derived from metadata) AND, when it differs, to a `<assetId><ext>`
-     * fallback path. The fallback covers downstream consumers (e.g. Moodle
-     * mod_exeweb / mod_exescorm activities -- exelearning/mod_exeweb#42 and
-     * exelearning/mod_exescorm#55) that load the package as a static site:
-     * if the HTML carries an unresolved `asset://uuid.ext` reference, the
-     * transformation in {@link addFilenamesToAssetUrls} falls back to a
-     * literal `content/resources/<uuid><ext>` URL. Without the fallback file
-     * in the ZIP that URL would 404 on the platform side. The cost of the
-     * extra entry is minimal (a duplicate file pointer in the same archive)
-     * and avoids broken images on legitimate exports while the upstream
-     * mismatch is being addressed.
+     * Each asset is written exactly once, under its resolved export path
+     * (the friendly filename derived from metadata). HTML and content.xml
+     * always reference the same path because both transformations resolve
+     * `asset://uuid.ext` URLs through {@link buildAssetExportPathMap}, so a
+     * literal `content/resources/<uuid><ext>` URL only appears for genuinely
+     * missing assets — and writing the file under that path would not help,
+     * because the asset is not in the iteration in the first place.
      *
      * @param trackingList - Optional array to track added file paths (for ELPX manifest)
      */
@@ -5900,14 +5993,12 @@ ${addExeLink ? this.renderMadeWithEXe() : ""}
             return;
           }
           const zipPath = `content/resources/${exportPath}`;
+          if (this.zip.hasFile(zipPath)) {
+            return;
+          }
           this.zip.addFile(zipPath, asset.data);
           if (trackingList) trackingList.push(zipPath);
           assetsAdded++;
-          const fallbackPath = this.buildUuidFallbackZipPath(asset);
-          if (fallbackPath && fallbackPath !== zipPath && !this.zip.hasFile(fallbackPath)) {
-            this.zip.addFile(fallbackPath, asset.data);
-            if (trackingList) trackingList.push(fallbackPath);
-          }
         };
         await this.forEachAsset(processAsset);
         this.logElpxExportDebugPhase("exporter:assets-to-zip:end", {
@@ -5918,27 +6009,6 @@ ${addExeLink ? this.renderMadeWithEXe() : ""}
         console.warn("[BaseExporter] Failed to add assets to ZIP:", e);
       }
       return assetsAdded;
-    }
-    /**
-     * Build the `content/resources/<assetId><ext>` fallback path for an
-     * asset, matching the literal URL produced by addFilenamesToAssetUrls
-     * when an `asset://` reference cannot be resolved against the export
-     * path map. Returns null when the asset metadata is not enough to derive
-     * a stable filename.
-     */
-    buildUuidFallbackZipPath(asset) {
-      if (!asset.id) {
-        return null;
-      }
-      const filename = asset.filename ?? "";
-      let ext = "";
-      const dotIndex = filename.lastIndexOf(".");
-      if (dotIndex !== -1 && dotIndex < filename.length - 1) {
-        ext = filename.substring(dotIndex);
-      } else if (asset.mime) {
-        ext = this.getExtensionFromMime(asset.mime);
-      }
-      return `content/resources/${asset.id}${ext}`;
     }
     // =========================================================================
     // Navigation Helpers
@@ -6270,10 +6340,7 @@ ${addExeLink ? this.renderMadeWithEXe() : ""}
       if (!content.includes("exe-package:elp")) {
         return content;
       }
-      let result = content.replace(
-        /href="exe-package:elp"/g,
-        `href="#" onclick="if(typeof downloadElpx==='function')downloadElpx();return false;"`
-      );
+      let result = content.replace(/href="exe-package:elp"/g, `href="#" onclick="${ELPX_DOWNLOAD_ONCLICK}"`);
       const safeTitle = this.escapeXml(projectTitle);
       result = result.replace(/download="exe-package:elp-name"/g, `download="${safeTitle}.elpx"`);
       return result;
@@ -7433,6 +7500,7 @@ ${FONT_SELECTORS} {
         usedIdevices,
         author: meta.author || "",
         license: meta.license || "",
+        licenseUrl: meta.licenseUrl || "",
         faviconPath: faviconInfo?.path,
         faviconType: faviconInfo?.type,
         // Application version for generator meta tag
@@ -7579,14 +7647,19 @@ html {
   // src/shared/export/generators/Scorm12Manifest.ts
   var Scorm12ManifestGenerator = class {
     /**
-     * @param projectId - Unique project identifier
+     * @param projectId - Bare project identifier (used for organization id and resource ids)
      * @param pages - Pages from navigation structure
      * @param metadata - Project metadata
+     * @param manifestIdentifier - Optional pre-built manifest@identifier. When provided
+     *   it is used verbatim (no `eXe-MANIFEST-` prefix is prepended). Pass this from
+     *   BaseExporter.getManifestIdentifier() so re-exports of the same project produce
+     *   a stable identifier the LMS can track (see exelearning/exelearning#1785).
      */
-    constructor(projectId, pages, metadata = {}) {
+    constructor(projectId, pages, metadata = {}, manifestIdentifier = null) {
       this.projectId = projectId || this.generateId();
       this.pages = pages || [];
       this.metadata = metadata;
+      this.manifestIdentifier = manifestIdentifier;
     }
     /**
      * Generate a unique ID for the project
@@ -7641,7 +7714,8 @@ html {
      * @returns Manifest opening XML
      */
     generateManifestOpen() {
-      return `<manifest identifier="eXe-MANIFEST-${this.escapeXml(this.projectId)}"
+      const identifier = this.manifestIdentifier ?? `eXe-MANIFEST-${this.projectId}`;
+      return `<manifest identifier="${this.escapeXml(identifier)}"
   xmlns="${SCORM_12_NAMESPACES.imscp}"
   xmlns:adlcp="${SCORM_12_NAMESPACES.adlcp}"
   xmlns:imsmd="${SCORM_12_NAMESPACES.imsmd}">
@@ -8050,7 +8124,8 @@ html {
         let pages = this.buildPageList();
         const meta = this.getMetadata();
         const themeName = options?.theme || meta.theme || "base";
-        const projectId = this.generateProjectId();
+        const manifestIdentifier = this.getManifestIdentifier();
+        const projectId = this.getBareProjectIdentifier();
         pages = await this.preprocessPagesForExport(pages);
         pages = pages.filter((p) => this.isPageVisible(p, pages));
         const pageFilenameMap = this.buildPageFilenameMap(pages);
@@ -8060,16 +8135,21 @@ html {
           this.zip.addFile(path, content);
           if (fileList) fileList.push(path);
         };
-        this.manifestGenerator = new Scorm12ManifestGenerator(projectId, pages, {
-          identifier: projectId,
+        this.manifestGenerator = new Scorm12ManifestGenerator(
+          projectId,
           pages,
-          version: "1.2",
-          title: meta.title || "eXeLearning",
-          language: meta.language || "en",
-          author: meta.author || "",
-          description: meta.description || "",
-          license: meta.license || ""
-        });
+          {
+            identifier: manifestIdentifier,
+            pages,
+            version: "1.2",
+            title: meta.title || "eXeLearning",
+            language: meta.language || "en",
+            author: meta.author || "",
+            description: meta.description || "",
+            license: meta.license || ""
+          },
+          manifestIdentifier
+        );
         this.lomGenerator = new LomMetadataGenerator(projectId, {
           title: meta.title || "eXeLearning",
           language: meta.language || "en",
@@ -8309,7 +8389,12 @@ html {
       }
     }
     /**
-     * Generate project ID for SCORM package
+     * Generate a random low-level project ID.
+     *
+     * @deprecated Since #1785, the SCORM manifest identifier is derived from
+     * the project's odeIdentifier via {@link BaseExporter.getManifestIdentifier}
+     * so LMS tracking survives re-uploads. This helper is kept only for
+     * external callers/tests and is no longer used by the export pipeline.
      */
     generateProjectId() {
       return Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
@@ -8559,14 +8644,19 @@ function setScore(score, maxScore, minScore) {
   // src/shared/export/generators/Scorm2004Manifest.ts
   var Scorm2004ManifestGenerator = class {
     /**
-     * @param projectId - Unique project identifier
+     * @param projectId - Bare project identifier (used for organization id and resource ids)
      * @param pages - Pages from navigation structure
      * @param metadata - Project metadata
+     * @param manifestIdentifier - Optional pre-built manifest@identifier. When provided
+     *   it is used verbatim (no `eXe-MANIFEST-` prefix is prepended). Pass this from
+     *   BaseExporter.getManifestIdentifier() so re-exports of the same project produce
+     *   a stable identifier the LMS can track (see exelearning/exelearning#1785).
      */
-    constructor(projectId, pages, metadata = {}) {
+    constructor(projectId, pages, metadata = {}, manifestIdentifier = null) {
       this.projectId = projectId || this.generateId();
       this.pages = pages || [];
       this.metadata = metadata;
+      this.manifestIdentifier = manifestIdentifier;
     }
     /**
      * Generate a unique ID for the project
@@ -8621,7 +8711,8 @@ function setScore(score, maxScore, minScore) {
      * @returns Manifest opening XML
      */
     generateManifestOpen() {
-      return `<manifest identifier="eXe-MANIFEST-${this.escapeXml(this.projectId)}"
+      const identifier = this.manifestIdentifier ?? `eXe-MANIFEST-${this.projectId}`;
+      return `<manifest identifier="${this.escapeXml(identifier)}"
   xmlns="${SCORM_2004_NAMESPACES.imscp}"
   xmlns:adlcp="${SCORM_2004_NAMESPACES.adlcp}"
   xmlns:adlseq="${SCORM_2004_NAMESPACES.adlseq}"
@@ -8818,7 +8909,8 @@ ${indentStr}</imsss:sequencing>
         let pages = this.buildPageList();
         const meta = this.getMetadata();
         const themeName = options?.theme || meta.theme || "base";
-        const projectId = this.generateProjectId();
+        const manifestIdentifier = this.getManifestIdentifier();
+        const projectId = this.getBareProjectIdentifier();
         pages = await this.preprocessPagesForExport(pages);
         pages = pages.filter((p) => this.isPageVisible(p, pages));
         const pageFilenameMap = this.buildPageFilenameMap(pages);
@@ -8828,16 +8920,21 @@ ${indentStr}</imsss:sequencing>
           this.zip.addFile(path, content);
           if (fileList) fileList.push(path);
         };
-        this.manifestGenerator = new Scorm2004ManifestGenerator(projectId, pages, {
-          identifier: projectId,
+        this.manifestGenerator = new Scorm2004ManifestGenerator(
+          projectId,
           pages,
-          version: "2004",
-          title: meta.title || "eXeLearning",
-          language: meta.language || "en",
-          author: meta.author || "",
-          description: meta.description || "",
-          license: meta.license || ""
-        });
+          {
+            identifier: manifestIdentifier,
+            pages,
+            version: "2004",
+            title: meta.title || "eXeLearning",
+            language: meta.language || "en",
+            author: meta.author || "",
+            description: meta.description || "",
+            license: meta.license || ""
+          },
+          manifestIdentifier
+        );
         this.lomGenerator = new LomMetadataGenerator(projectId, {
           title: meta.title || "eXeLearning",
           language: meta.language || "en",
@@ -9067,7 +9164,12 @@ ${indentStr}</imsss:sequencing>
       }
     }
     /**
-     * Generate project ID for SCORM package
+     * Generate a random low-level project ID.
+     *
+     * @deprecated Since #1785, the SCORM manifest identifier is derived from
+     * the project's odeIdentifier via {@link BaseExporter.getManifestIdentifier}
+     * so LMS tracking survives re-uploads. This helper is kept only for
+     * external callers/tests and is no longer used by the export pipeline.
      */
     generateProjectId() {
       return Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
@@ -9322,14 +9424,19 @@ function setScore(score, maxScore, minScore) {
   // src/shared/export/generators/ImsManifest.ts
   var ImsManifestGenerator = class {
     /**
-     * @param projectId - Unique project identifier
+     * @param projectId - Bare project identifier (used for organization id and resource ids)
      * @param pages - Pages from navigation structure
      * @param metadata - Project metadata
+     * @param manifestIdentifier - Optional pre-built manifest@identifier. When provided
+     *   it is used verbatim (no `eXe-MANIFEST-` prefix is prepended). Pass this from
+     *   BaseExporter.getManifestIdentifier() so re-exports of the same project produce
+     *   a stable identifier the LMS can track (see exelearning/exelearning#1785).
      */
-    constructor(projectId, pages, metadata = {}) {
+    constructor(projectId, pages, metadata = {}, manifestIdentifier = null) {
       this.projectId = projectId || this.generateId();
       this.pages = pages || [];
       this.metadata = metadata;
+      this.manifestIdentifier = manifestIdentifier;
     }
     /**
      * Generate a unique ID for the project
@@ -9384,7 +9491,8 @@ function setScore(score, maxScore, minScore) {
      * @returns Manifest opening XML
      */
     generateManifestOpen() {
-      return `<manifest identifier="eXe-MANIFEST-${this.escapeXml(this.projectId)}"
+      const identifier = this.manifestIdentifier ?? `eXe-MANIFEST-${this.projectId}`;
+      return `<manifest identifier="${this.escapeXml(identifier)}"
   xmlns="${IMS_NAMESPACES.imscp}"
   xmlns:imsmd="${IMS_NAMESPACES.imsmd}">
 `;
@@ -9587,7 +9695,8 @@ function setScore(score, maxScore, minScore) {
         let pages = this.buildPageList();
         const meta = this.getMetadata();
         const themeName = options?.theme || meta.theme || "base";
-        const projectId = this.generateProjectId();
+        const manifestIdentifier = this.getManifestIdentifier();
+        const projectId = this.getBareProjectIdentifier();
         pages = await this.preprocessPagesForExport(pages);
         pages = pages.filter((p) => this.isPageVisible(p, pages));
         const pageFilenameMap = this.buildPageFilenameMap(pages);
@@ -9597,15 +9706,20 @@ function setScore(score, maxScore, minScore) {
           this.zip.addFile(path, content);
           if (fileList) fileList.push(path);
         };
-        this.manifestGenerator = new ImsManifestGenerator(projectId, pages, {
-          identifier: projectId,
+        this.manifestGenerator = new ImsManifestGenerator(
+          projectId,
           pages,
-          title: meta.title || "eXeLearning",
-          language: meta.language || "en",
-          author: meta.author || "",
-          description: meta.description || "",
-          license: meta.license || ""
-        });
+          {
+            identifier: manifestIdentifier,
+            pages,
+            title: meta.title || "eXeLearning",
+            language: meta.language || "en",
+            author: meta.author || "",
+            description: meta.description || "",
+            license: meta.license || ""
+          },
+          manifestIdentifier
+        );
         const commonFiles = [];
         const pageFiles = {};
         const { themeFilesMap, themeRootFiles, faviconInfo } = await this.prepareThemeData(themeName);
@@ -9815,7 +9929,12 @@ function setScore(score, maxScore, minScore) {
       }
     }
     /**
-     * Generate project ID for IMS package
+     * Generate a random low-level project ID.
+     *
+     * @deprecated Since #1785, the IMS manifest identifier is derived from
+     * the project's odeIdentifier via {@link BaseExporter.getManifestIdentifier}
+     * so LMS tracking survives re-uploads. This helper is kept only for
+     * external callers/tests and is no longer used by the export pipeline.
      */
     generateProjectId() {
       return Date.now().toString(36) + Math.random().toString(36).substring(2, 7);

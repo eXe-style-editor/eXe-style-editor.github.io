@@ -1737,7 +1737,7 @@ function currentElpxPagePath() {
   }
 }
 
-function rewriteElpxThemeUrls(cssText) {
+function rewriteElpxThemeUrls(cssText, { preferBlobUrls = false } = {}) {
   if (!state.elpxMode || !state.elpxSessionId) return String(cssText || "");
   const themeBasePath = normalizePath(state.elpxThemePrefix || "theme/");
   const resolveRelativeToTheme = (token) => {
@@ -1767,6 +1767,15 @@ function rewriteElpxThemeUrls(cssText) {
     if (token.startsWith(ELPX_URL_PREFIX)) return `url("${token}")`;
     const resolvedRelative = resolveRelativeToTheme(token);
     if (!resolvedRelative) return full;
+    if (preferBlobUrls) {
+      const relThemePath = resolvedRelative.startsWith(themeBasePath)
+        ? normalizePath(resolvedRelative.slice(themeBasePath.length))
+        : "";
+      if (relThemePath && state.files.has(relThemePath)) {
+        const blobUrl = getBlobUrl(relThemePath);
+        if (blobUrl) return `url("${blobUrl}")`;
+      }
+    }
     return `url("${elpxUrlPath(state.elpxSessionId, resolvedRelative)}")`;
   });
 }
@@ -1810,7 +1819,7 @@ function applyLiveElpxCssToFrame() {
   }
   if (!doc?.head) return;
   applySelectedExportTypeToFrame();
-  const cssText = previewCssText(rewriteElpxThemeUrls(readCss()));
+  const cssText = previewCssText(rewriteElpxThemeUrls(readCss(), { preferBlobUrls: true }));
   if (cssText === state.previewLastElpxCss) return;
   let styleNode = doc.getElementById("editor-elpx-live-css");
   if (!styleNode || String(styleNode.tagName || "").toLowerCase() !== "style") {
@@ -1876,11 +1885,29 @@ function scheduleElpxThemeSync() {
   if (state.elpxThemeSyncTimer) clearTimeout(state.elpxThemeSyncTimer);
   state.elpxThemeSyncTimer = window.setTimeout(() => {
     state.elpxThemeSyncTimer = 0;
-    syncThemeFilesToElpxCache().catch((err) => {
+    syncThemeFilesToElpxCache({ replaceTheme: true }).catch((err) => {
       console.warn("[EdEX] ELPX theme cache sync failed:", err);
       setStatus(i18nText("status.elpxThemeSyncError", `No se pudo actualizar la previsualización ELPX: ${err.message}`, { error: err.message }));
     });
   }, 220);
+}
+
+// Sincroniza la caché del service worker ELPX de forma inmediata (sin debounce),
+// purgando los archivos de tema que ya no existen en state.files. Necesario antes
+// de re-renderizar la previsualización cuando se sustituye o elimina una imagen:
+// el navegador re-solicita la imagen al inyectar el CSS, así que la caché debe
+// contener ya los bytes correctos para no servir la versión anterior.
+async function flushElpxThemeCacheNow() {
+  if (!state.elpxMode) return;
+  if (state.elpxThemeSyncTimer) {
+    clearTimeout(state.elpxThemeSyncTimer);
+    state.elpxThemeSyncTimer = 0;
+  }
+  try {
+    await syncThemeFilesToElpxCache({ replaceTheme: true });
+  } catch (err) {
+    console.warn("[EdEX] ELPX theme cache flush failed:", err);
+  }
 }
 
 async function initExeRuntime() {
@@ -3058,6 +3085,17 @@ function cssColorWithTransparency(hex, transparencyPercent) {
   return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(2)})`;
 }
 
+function normalizeFontWeightValue(value, fallback = "400") {
+  const raw = String(value || "").trim().toLowerCase();
+  if (raw === "normal") return "400";
+  if (raw === "bold") return "700";
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n)) return String(fallback);
+  const rounded = Math.round(n / 100) * 100;
+  if (rounded < 100 || rounded > 900) return String(fallback);
+  return String(rounded);
+}
+
 function updateAlphaDisplay(input) {
   if (input.type !== "range") return;
   const span = input.parentElement?.querySelector(".alpha-value");
@@ -3557,9 +3595,11 @@ function quickFromUI({ base = state.quick, onlyKey = "" } = {}) {
   next.bgImageSoftness = Math.max(0, Math.min(90, Number(next.bgImageSoftness) || QUICK_DEFAULTS.bgImageSoftness));
   if (!["no-repeat", "repeat-x", "repeat-y", "repeat"].includes(next.footerImageRepeat)) next.footerImageRepeat = QUICK_DEFAULTS.footerImageRepeat;
   next.pageTitleSize = Math.max(1.1, Math.min(3.2, Number(next.pageTitleSize) || QUICK_DEFAULTS.pageTitleSize));
+  next.pageTitleWeight = normalizeFontWeightValue(next.pageTitleWeight, QUICK_DEFAULTS.pageTitleWeight);
   next.pageTitleLetterSpacing = Math.max(0, Math.min(6, Number(next.pageTitleLetterSpacing) || QUICK_DEFAULTS.pageTitleLetterSpacing));
   next.pageTitleMarginBottom = Math.max(0, Math.min(2.5, Number(next.pageTitleMarginBottom) || QUICK_DEFAULTS.pageTitleMarginBottom));
   next.packageTitleSize = Math.max(0, Math.min(4, Number(next.packageTitleSize) || QUICK_DEFAULTS.packageTitleSize));
+  next.packageTitleWeight = normalizeFontWeightValue(next.packageTitleWeight, QUICK_DEFAULTS.packageTitleWeight);
   next.boxTitleSize = Math.max(1, Math.min(2.4, Number(next.boxTitleSize) || QUICK_DEFAULTS.boxTitleSize));
   next.boxTitleGap = Math.max(0, Math.min(28, Number(next.boxTitleGap) || QUICK_DEFAULTS.boxTitleGap));
   next.compactNoHeaderIdevices = Boolean(next.compactNoHeaderIdevices);
@@ -4264,7 +4304,7 @@ function currentClickEditDeclarations() {
       declarations["font-size"] = `${normalizePxNumber(els.clickPropFontSize?.value || "16", 16)}px`;
     }
     if (wasClickEditFieldTouched("fontWeight")) {
-      declarations["font-weight"] = String(Number.parseInt(els.clickPropFontWeight?.value || "400", 10) || 400);
+      declarations["font-weight"] = normalizeFontWeightValue(els.clickPropFontWeight?.value, "400");
     }
     if (profile.allowTextAlign && wasClickEditFieldTouched("textAlign")) {
       const textAlign = sanitizeCssValue(els.clickPropTextAlign?.value || "");
@@ -4297,8 +4337,8 @@ function quickSyncValueFromDeclaration(prop, value, fallback = "") {
     return px ? String(Math.round(Number.parseFloat(px[1]) || 0)) : "";
   }
   if (normalizedProp === "font-weight") {
-    const weight = String(value || "").trim();
-    return /^\d{3}$/.test(weight) ? weight : "";
+    const weight = normalizeFontWeightValue(value, "");
+    return weight ? weight : "";
   }
   return "";
 }
@@ -5074,7 +5114,7 @@ function quickFromCss(cssText) {
   const pageTitleSizeMatch = pageTitleSizeRaw.match(/([0-9.]+)\s*rem/i);
   if (pageTitleSizeMatch) q.pageTitleSize = Number(pageTitleSizeMatch[1]);
   const pageTitleWeightRaw = lastRulePropValue(pageTitleSelectors, ["font-weight"]);
-  if (/^\d{3}$/.test(pageTitleWeightRaw) || /^(bold|normal)$/.test(pageTitleWeightRaw)) q.pageTitleWeight = pageTitleWeightRaw === "bold" ? "700" : pageTitleWeightRaw === "normal" ? "400" : pageTitleWeightRaw;
+  if (pageTitleWeightRaw) q.pageTitleWeight = normalizeFontWeightValue(pageTitleWeightRaw, q.pageTitleWeight);
   const pageTitleUpperRaw = lastRulePropValue(pageTitleSelectors, ["text-transform"]);
   if (pageTitleUpperRaw) q.pageTitleUppercase = pageTitleUpperRaw.toLowerCase().includes("upper");
   const pageTitleLsRaw = lastRulePropValue(pageTitleSelectors, ["letter-spacing"]);
@@ -5089,7 +5129,7 @@ function quickFromCss(cssText) {
   q.packageTitleSize = parseCssLengthToRem(packageTitleSizeRaw, q.packageTitleSize);
   const packageTitleWeightRaw = lastRulePropValue(packageTitleSelectors, ["font-weight"])
     || matchValue(/\.exe-content\s*\.package-title\s*\{[\s\S]*?font-weight:\s*([^;]+);/i, "");
-  if (/^\d{3}$/.test(packageTitleWeightRaw)) q.packageTitleWeight = packageTitleWeightRaw;
+  if (packageTitleWeightRaw) q.packageTitleWeight = normalizeFontWeightValue(packageTitleWeightRaw, q.packageTitleWeight);
   q.packageTitleColor = normalizeHex(
     lastRulePropValue(packageTitleSelectors, ["color"])
       || matchValue(/\.exe-content\s*\.package-title\s*\{[\s\S]*?color:\s*([^;]+);/i, q.packageTitleColor),
@@ -6919,7 +6959,7 @@ async function onAddBackgroundImageSelected(file) {
     return;
   }
   const extension = (file.name.split(".").pop() || "png").toLowerCase();
-  const path = `img/custom-background.${extension}`;
+  const path = `img/custom-background-${Date.now().toString(36)}.${extension}`;
   pushUndoSnapshot();
   const bytes = new Uint8Array(await file.arrayBuffer());
 
@@ -6937,6 +6977,7 @@ async function onAddBackgroundImageSelected(file) {
   markDirty();
   refreshFileTypeFilterOptions();
   renderFileList();
+  await flushElpxThemeCacheNow();
   renderPreview();
   setStatus(i18nText("status.bgImageLoaded", `Imagen de fondo cargada: ${path}`, { path }));
 }
@@ -6957,7 +6998,7 @@ function selectBackgroundImageFromStylePath(path) {
   setStatus(i18nText("status.bgImageSelected", `Imagen de fondo seleccionada desde el estilo: ${clean}`, { path: clean }));
 }
 
-function removeBackgroundImage() {
+async function removeBackgroundImage() {
   pushUndoSnapshot();
   if (state.quick.bgImagePath && state.files.has(state.quick.bgImagePath)) {
     state.files.delete(state.quick.bgImagePath);
@@ -6970,6 +7011,7 @@ function removeBackgroundImage() {
   markDirty();
   refreshFileTypeFilterOptions();
   renderFileList();
+  await flushElpxThemeCacheNow();
   renderPreview();
   setStatusT("status.bgImageRemoved", "Imagen de fondo eliminada.");
 }
@@ -7004,6 +7046,7 @@ async function onAddHeaderImageSelected(file) {
   markDirty();
   refreshFileTypeFilterOptions();
   renderFileList();
+  await flushElpxThemeCacheNow();
   renderPreview();
   setStatus(i18nText("status.headerImageLoaded", `Imagen de cabecera cargada: ${path}`, { path }));
 }
@@ -7024,7 +7067,7 @@ function selectHeaderImageFromStylePath(path) {
   setStatus(i18nText("status.headerImageSelected", `Imagen de cabecera seleccionada desde el estilo: ${clean}`, { path: clean }));
 }
 
-function removeHeaderImage() {
+async function removeHeaderImage() {
   pushUndoSnapshot();
   if (
     state.quick.headerImagePath
@@ -7041,6 +7084,7 @@ function removeHeaderImage() {
   markDirty();
   refreshFileTypeFilterOptions();
   renderFileList();
+  await flushElpxThemeCacheNow();
   renderPreview();
   setStatusT("status.headerImageRemoved", "Imagen de cabecera eliminada.");
 }
@@ -7075,6 +7119,7 @@ async function onAddFooterImageSelected(file) {
   markDirty();
   refreshFileTypeFilterOptions();
   renderFileList();
+  await flushElpxThemeCacheNow();
   renderPreview();
   setStatus(i18nText("status.footerImageLoaded", `Imagen de pie cargada: ${path}`, { path }));
 }
@@ -7095,7 +7140,7 @@ function selectFooterImageFromStylePath(path) {
   setStatus(i18nText("status.footerImageSelected", `Imagen de pie seleccionada desde el estilo: ${clean}`, { path: clean }));
 }
 
-function removeFooterImage() {
+async function removeFooterImage() {
   pushUndoSnapshot();
   if (
     state.quick.footerImagePath
@@ -7112,6 +7157,7 @@ function removeFooterImage() {
   markDirty();
   refreshFileTypeFilterOptions();
   renderFileList();
+  await flushElpxThemeCacheNow();
   renderPreview();
   setStatusT("status.footerImageRemoved", "Imagen de pie eliminada.");
 }
@@ -7696,7 +7742,9 @@ function setupEvents() {
   });
 
   els.removeBgImageBtn?.addEventListener("click", () => {
-    removeBackgroundImage();
+    removeBackgroundImage().catch((err) => {
+      setStatus(i18nText("status.errorLoadingBgImage", `Error cargando imagen de fondo: ${err.message}`, { error: err.message }));
+    });
   });
 
   els.bgImageSelect?.addEventListener("change", () => {
@@ -7722,7 +7770,9 @@ function setupEvents() {
   });
 
   els.removeHeaderImageBtn?.addEventListener("click", () => {
-    removeHeaderImage();
+    removeHeaderImage().catch((err) => {
+      setStatus(i18nText("status.errorLoadingHeaderImage", `Error cargando imagen de cabecera: ${err.message}`, { error: err.message }));
+    });
   });
 
   els.showAllStyleImages?.addEventListener("change", () => {
@@ -7753,7 +7803,9 @@ function setupEvents() {
   });
 
   els.removeFooterImageBtn?.addEventListener("click", () => {
-    removeFooterImage();
+    removeFooterImage().catch((err) => {
+      setStatus(i18nText("status.errorLoadingFooterImage", `Error cargando imagen de pie: ${err.message}`, { error: err.message }));
+    });
   });
 
   els.footerImageSelect?.addEventListener("change", () => {

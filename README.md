@@ -4,6 +4,8 @@ Editor web para crear, ajustar y exportar estilos (`.zip`) compatibles con eXeLe
 
 Versión actual: `v 2.0.5`
 
+Recursos y plantillas oficiales de eXeLearning: `4.0.3`.
+
 ## Qué hace
 
 - Carga estilos oficiales de eXe como base.

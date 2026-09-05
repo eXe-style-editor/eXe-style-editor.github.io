@@ -48,6 +48,8 @@ Prioridad acordada: **compatibilidad real con eXeLearning** y cambios automátic
 - Selectores protegidos para evitar efectos colaterales (`.box-toggle`, togglers, etc.).
 - El editor no debe exigir conocimientos de CSS para resolver errores comunes: corrige automáticamente cuando es posible.
 - Para actualizar recursos desde eXeLearning, usar `scripts/sync-exe-bundles.sh`. Por defecto sincroniza contra la ultima release estable y solo actualiza si detecta una nueva; `--from-main` queda reservado para snapshots de desarrollo. Debe mantener sincronizados tanto `app/exe-runtime/` como `reference/themes/official/` y regenerar `app/official-styles.json`; no actualizar solo una de esas partes.
+- Compatibilidad entre versiones de eXeLearning: antes de cada actualización, comparar estructura y metadatos de los estilos, selectores/HTML de la exportación y API de los importadores/exportadores. Probar plantillas y estilos personalizados anteriores con la nueva versión. No crear un modo distinto por cada número de versión: las versiones compatibles deben compartir soporte.
+- Si una actualización rompe esa compatibilidad, conservar el soporte anterior y separar los recursos, plantillas y adaptadores necesarios por familia compatible antes de adoptarla. Cada previsualización/exportación debe usar recursos de una misma familia, sin mezclarlos. No sobrescribir estilos del usuario ni convertirlos silenciosamente. Detectar la familia cuando haya evidencia suficiente; si es ambigua, permitir elegirla e informar de las limitaciones, sin prometer soporte para estructuras desconocidas. Procedimiento y comprobaciones en `reference/development/exelearning-runtime.md`.
 
 ## Reglas de exportación
 - Se bloquea exportación solo por incidencias críticas:

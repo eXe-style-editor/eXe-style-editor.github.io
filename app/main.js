@@ -6724,8 +6724,6 @@ async function exportZip() {
   const warnings = [];
   if (!screenshotUpdated) warnings.push("no se pudo actualizar screenshot automáticamente (se mantuvo el existente)");
   if (autoAddedOnExport.length) warnings.push(`se crearon obligatorios: ${autoAddedOnExport.join(", ")}`);
-  if (report.missingTemplate.length) warnings.push(`faltan ${report.missingTemplate.length} archivo(s) respecto a la plantilla original`);
-  if (report.missingBase.length) warnings.push(`faltan ${report.missingBase.length} archivo(s) respecto a la base oficial`);
   const warningText = warnings.length ? i18nText("status.withWarning", ` con aviso: ${warnings.join(" ; ")}`, { details: warnings.join(" ; ") }) : "";
   setStatus(i18nText("status.zipExported", `ZIP exportado correctamente (${state.files.size} archivos)${warningText}`, { count: state.files.size, warningText }));
 }

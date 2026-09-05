@@ -64,9 +64,8 @@ SHA-256 de los archivos copiados.
 
 ## Uso previsto
 
-Esta carpeta aun no sustituye la previsualizacion actual. Es una base estable
-para crear despues el adaptador local que cargue ELPX, resuelva recursos y
-exporte Website, Single Page y SCORM con los exportadores oficiales.
+El adaptador carga ELPX, resuelve recursos y genera previsualizaciones y
+exportaciones con los exportadores oficiales de eXeLearning.
 
 El primer adaptador esta en:
 
@@ -105,6 +104,73 @@ Notas de rendimiento:
   solicitado.
 - A largo plazo sigue siendo mejor partirlos en bundles pequenos por
   libreria/iDevice o generar un indice ligero con acceso por entrada.
+
+## Compatibilidad en futuras actualizaciones
+
+La versión de eXeLearning de los recursos se registra en `manifest.json` y
+`app/runtime-source.js`; no es la versión de EdEX ni el campo `version` de un
+estilo. El campo `compatibility` del estilo tampoco identifica necesariamente
+la versión exacta que lo creó.
+
+No hace falta mantener un modo por cada versión de eXeLearning. Mientras los
+contratos de estilos y exportación sean compatibles, se actualiza el conjunto
+compartido. Antes de adoptar cada release:
+
+1. Revisar sus cambios y comparar los estilos oficiales: archivos de entrada,
+   `config.xml`, recursos, selectores CSS y comportamiento de `style.js`.
+2. Comprobar las API utilizadas por `exe-runtime.js` y el HTML generado:
+   clases, estructura de navegación, títulos, iDevices y botones que utilizan
+   los ajustes rápidos y la edición por clic.
+3. Probar el ejemplo ELPX, plantillas oficiales y un estilo personalizado de
+   la versión anterior; comprobar ajustes, ZIP y exportaciones Website,
+   Single Page y SCORM. Verificar que las personalizaciones se conservan.
+4. Revisar juntos los cambios de runtime, plantillas y catálogo; registrar el
+   resultado antes de publicar. Un cambio de número por sí solo no justifica
+   separar versiones.
+
+Si aparece una ruptura real, no sustituir el único conjunto compartido y dar
+por hecho que los estilos antiguos funcionarán. Antes de publicar esa release:
+
+- Conservar la familia anterior con sus plantillas, bundles y recursos.
+- Incorporar la nueva familia con su adaptador de importación/exportación,
+  selectores de ajustes y previsualización cuando sean distintos.
+- Mantener un catálogo que relacione versiones verificadas con familias y
+  rutas. Cargar siempre un conjunto coherente; aislar o recargar el motor al
+  cambiar de familia para no mezclar los globals de sus bundles.
+- Detectar la familia a partir de metadatos y estructura reconocibles. Si no
+  basta, ofrecer una selección explícita con una explicación sencilla.
+  Una estructura desconocida no debe recibir ajustes automáticos que se
+  presuponen compatibles. Conservar los archivos originales y permitir su
+  recuperación; cualquier migración debe ser explícita y reversible.
+- Repetir las pruebas con ambas familias y documentar los límites del soporte.
+
+Esta es la política para futuras rupturas, no una función de detección o un
+selector de versiones ya implementados. El editor sigue usando un único
+conjunto de recursos mientras no se necesite esa separación.
+
+### Revisión de 4.0.1 a 4.0.3 (2026-09-05)
+
+- Recursos obtenidos de la release oficial `v4.0.3`, publicada el 2026-08-06,
+  mediante `scripts/sync-exe-bundles.sh`.
+- Las seis plantillas conservan sus archivos de entrada y estructura. Se
+  elimina `downloadable` de sus XML (el editor ya interpreta su ausencia como
+  permitido) y Nova añade indicadores de modo docente. No se ha identificado
+  una ruptura que requiera separar familias.
+- Comprobados los 482 archivos del manifest por tamaño y SHA-256, la igualdad
+  de las dos copias de plantillas y las entradas del catálogo. Una segunda
+  sincronización detecta que la release ya está actualizada y no modifica nada.
+- Pruebas en Chromium: carga del editor sin errores JavaScript; importación
+  del manual ELPX de seis páginas; generación de HTML con las seis plantillas;
+  exportación Website, Single Page, SCORM 1.2 (con `imsmanifest.xml`) y ELPX.
+  El ELPX exportado se reimporta con las seis páginas.
+- Importación por la interfaz de un ZIP personalizado construido con Base
+  de 4.0.1, cambio de color mediante ajustes rápidos y exportación ZIP:
+  conserva el CSS personalizado e incluye el nuevo ajuste. Corregida una
+  consulta a campos obsoletos del informe de validación que impedía mostrar
+  el mensaje final de éxito tras descargar el ZIP.
+- En la prueba automatizada del ZIP se utilizó el fallback previsto de
+  `screenshot.png`: se conservó la captura existente. Estas comprobaciones no
+  equivalen a probar todos los iDevices ni la ejecución en un LMS externo.
 
 ## Globals expuestos por los bundles
 

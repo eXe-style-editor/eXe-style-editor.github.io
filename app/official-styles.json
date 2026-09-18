@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-05T15:33:50.320Z",
+  "generatedAt": "2026-09-18T04:01:07.826Z",
   "styles": [
     {
       "id": "base",
@@ -65,20 +65,20 @@
       "meta": {
         "name": "base",
         "title": "Default",
-        "version": "2025",
-        "compatibility": "3.0",
+        "version": "20260913",
+        "compatibility": "4.0.5",
         "author": "eXeLearning.net",
-        "description": "Minimally-styled, feature rich responsive style for eXe.\n\niDevice icons by Francisco Javier Pulido Cuadrado."
+        "description": "Minimally-styled, feature rich responsive style for eXe. Its colours and typography meet WCAG 2.2 level AA.\n\niDevice icons by Francisco Javier Pulido Cuadrado, under the same license as this style (Creative Commons BY-SA 4.0, http://creativecommons.org/licenses/by-sa/4.0/).\n\nCreative Commons license badges (img/licenses.gif) are trademarks of Creative Commons (https://creativecommons.org) and are used under their trademark policy (https://creativecommons.org/policies/). They are not covered by this style's CC BY-SA license."
       }
     },
     {
-      "id": "flux",
-      "dir": "reference/themes/official/flux",
+      "id": "educablue",
+      "dir": "reference/themes/official/educablue",
       "files": [
         "config.xml",
-        "fonts/Fredoka-Bold.woff",
-        "fonts/Fredoka-Regular.woff",
-        "fonts/Fredoka-SemiBold.woff",
+        "fonts/InclusiveSans-Italic-VariableFont_wght.ttf",
+        "fonts/InclusiveSans-VariableFont_wght.ttf",
+        "fonts/OFL.txt",
         "icons/activity.svg",
         "icons/agreement.svg",
         "icons/alert.svg",
@@ -129,6 +129,89 @@
         "icons/think_alt.svg",
         "icons/think.svg",
         "icons/video.svg",
+        "img/arrow-down-2-light.svg",
+        "img/arrow-left-01.svg",
+        "img/cancel-01-stroke-rounded-dm.svg",
+        "img/cancel-01-stroke-rounded.svg",
+        "img/licenses.gif",
+        "img/menu-01-dm.svg",
+        "img/menu-01.svg",
+        "img/moon.svg",
+        "img/search-01.svg",
+        "img/sun.svg",
+        "screenshot.png",
+        "style.css",
+        "style.js"
+      ],
+      "meta": {
+        "name": "educablue",
+        "title": "EducaBlue",
+        "version": "20260913",
+        "compatibility": "4.0.5",
+        "author": "EducaMadrid",
+        "description": "Responsive modern blue style for eXeLearning, with dark mode. Its colours and typography meet WCAG 2.2 level AA.\n\niDevice icons by tabler-icons (https://github.com/tabler/tabler-icons), MIT License.\n\nNavigation icons by Hugeicons (https://hugeicons.com), free license. These icons are not under CC-BY-SA and cannot be relicensed; they have their own license with restrictions on redistribution. See https://hugeicons.com for details.\n\nCreative Commons license badges (img/licenses.gif) are trademarks of Creative Commons (https://creativecommons.org) and are used under their trademark policy (https://creativecommons.org/policies/). They are not covered by this style's CC BY-SA license.\n\nInclusive Sans Font, Copyright 2024 The Inclusive Sans Project Authors (https://github.com/LivKing/Inclusive-Sans). This font software is licensed under the SIL Open Font License, Version 1.1. The full license text is included in fonts/OFL.txt."
+      }
+    },
+    {
+      "id": "flux",
+      "dir": "reference/themes/official/flux",
+      "files": [
+        "config.xml",
+        "fonts/Fredoka-Bold.woff2",
+        "fonts/Fredoka-Regular.woff2",
+        "fonts/Fredoka-SemiBold.woff2",
+        "fonts/OFL.txt",
+        "icons/activity.svg",
+        "icons/agreement.svg",
+        "icons/alert.svg",
+        "icons/arts.svg",
+        "icons/ask.svg",
+        "icons/book.svg",
+        "icons/calculate.svg",
+        "icons/case.svg",
+        "icons/chrono.svg",
+        "icons/collaborative.svg",
+        "icons/competencies.svg",
+        "icons/diary_alt.svg",
+        "icons/diary.svg",
+        "icons/discuss.svg",
+        "icons/download.svg",
+        "icons/draw.svg",
+        "icons/english.svg",
+        "icons/experiment.svg",
+        "icons/explore.svg",
+        "icons/file.svg",
+        "icons/gallery.svg",
+        "icons/geography.svg",
+        "icons/guide.svg",
+        "icons/history.svg",
+        "icons/info.svg",
+        "icons/interactive.svg",
+        "icons/letters.svg",
+        "icons/LICENSE.txt",
+        "icons/listen.svg",
+        "icons/math.svg",
+        "icons/music.svg",
+        "icons/nature.svg",
+        "icons/objectives.svg",
+        "icons/observe.svg",
+        "icons/passport.svg",
+        "icons/perform.svg",
+        "icons/piece.svg",
+        "icons/pieces.svg",
+        "icons/play.svg",
+        "icons/present.svg",
+        "icons/reflection.svg",
+        "icons/roadmap.svg",
+        "icons/share.svg",
+        "icons/sport.svg",
+        "icons/start.svg",
+        "icons/stop.svg",
+        "icons/suitcase.svg",
+        "icons/technology.svg",
+        "icons/think_alt.svg",
+        "icons/think.svg",
+        "icons/video.svg",
         "img/arrow_down_menu.svg",
         "img/arrow_down_white.svg",
         "img/arrow_down.svg",
@@ -155,10 +238,10 @@
       "meta": {
         "name": "flux",
         "title": "Flux",
-        "version": "2025",
-        "compatibility": "3.0",
+        "version": "20260913",
+        "compatibility": "4.0.5",
         "author": "3ipunt Consejería de Educación Canarias",
-        "description": "Energía en movimiento.\n\niDevice icons by Google (https://fonts.google.com/icons), under the 2.0 version of the Apache License (https://www.apache.org/licenses/LICENSE-2.0.html).\n\nFredoka Font, by Milena Brandao, under the SIL Open Font License, Version 1.1. Copyright (c) 2021, Milena Brandao."
+        "description": "Energía en movimiento.\n\niDevice icons by Google (Material Symbols, https://fonts.google.com/icons), under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0). The full license text is included in icons/LICENSE.txt.\n\nFredoka Font, designed by Milena Brandao, under the SIL Open Font License, Version 1.1. Copyright 2016 The Fredoka Project Authors (https://github.com/hafontia/Fredoka-One). The full license text is included in fonts/OFL.txt.\n\nCreative Commons license badges (img/licenses.gif) are trademarks of Creative Commons (https://creativecommons.org) and are used under their trademark policy (https://creativecommons.org/policies/). They are not covered by this style's CC BY-SA license."
       }
     },
     {
@@ -166,14 +249,11 @@
       "dir": "reference/themes/official/neo",
       "files": [
         "config.xml",
-        "fonts/Nunito-Bold.woff",
         "fonts/Nunito-Bold.woff2",
-        "fonts/Nunito-BoldItalic.woff",
         "fonts/Nunito-BoldItalic.woff2",
-        "fonts/Nunito-Italic.woff",
         "fonts/Nunito-Italic.woff2",
-        "fonts/Nunito-Regular.woff",
         "fonts/Nunito-Regular.woff2",
+        "fonts/OFL.txt",
         "icons/activity.png",
         "icons/agreement.png",
         "icons/alert.png",
@@ -205,7 +285,7 @@
         "icons/math.png",
         "icons/music.png",
         "icons/nature.png",
-        "icons/objetives.png",
+        "icons/objectives.png",
         "icons/observe.png",
         "icons/passport.png",
         "icons/perform.png",
@@ -256,10 +336,10 @@
       "meta": {
         "name": "neo",
         "title": "Neo",
-        "version": "2025",
-        "compatibility": "3.0",
+        "version": "20260913",
+        "compatibility": "4.0.5",
         "author": "3ipunt for eXeLearning.net",
-        "description": "Innovación con propósito.\n\niDevice icons by Francisco Javier Pulido Cuadrado, and new adaptations by eXeLearning.\n\nNunito Font, by Vernon Adams (vern@newtypography.co.uk), under the SIL Open Font License, Version 1.1. Copyright (c) 2014, Vernon Adams (vern@newtypography.co.uk), with Reserved Font Name \"Nunito\"."
+        "description": "Innovación con propósito.\n\niDevice icons by Francisco Javier Pulido Cuadrado, and new adaptations by eXeLearning.\n\nNunito Font, designed by Vernon Adams, under the SIL Open Font License, Version 1.1. Copyright 2014 The Nunito Project Authors (https://github.com/googlefonts/nunito). The full license text is included in fonts/OFL.txt.\n\nCreative Commons license badges (img/licenses.gif) are trademarks of Creative Commons (https://creativecommons.org) and are used under their trademark policy (https://creativecommons.org/policies/). They are not covered by this style's CC BY-SA license."
       }
     },
     {
@@ -267,9 +347,8 @@
       "dir": "reference/themes/official/nova",
       "files": [
         "config.xml",
-        "fonts/open-sans-bold.woff",
+        "fonts/LICENSE.txt",
         "fonts/open-sans-bold.woff2",
-        "fonts/open-sans.woff",
         "fonts/open-sans.woff2",
         "icons/activity.svg",
         "icons/agreement.svg",
@@ -298,6 +377,7 @@
         "icons/info.svg",
         "icons/interactive.svg",
         "icons/letters.svg",
+        "icons/LICENSE.txt",
         "icons/listen.svg",
         "icons/math.svg",
         "icons/music.svg",
@@ -344,10 +424,10 @@
       "meta": {
         "name": "nova",
         "title": "Nova",
-        "version": "2025",
-        "compatibility": "3.0",
+        "version": "20260913",
+        "compatibility": "4.0.5",
         "author": "3ipunt Consejería de Educación Canarias",
-        "description": "Aprender, crecer, avanzar.\n\niDevice icons by Francisco Javier Pulido Cuadrado.\n\nOpen Sans Font, by The Open Sans Project Authors, under the SIL Open Font License, Version 1.1. Copyright 2020 The Open Sans Project Authors (https://github.com/googlefonts/opensans)."
+        "description": "Aprender, crecer, avanzar.\n\niDevice icons by Google (Material Symbols, https://fonts.google.com/icons), under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0). The full license text is included in icons/LICENSE.txt.\n\nOpen Sans Font (version 1.10), designed by Steve Matteson, under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0). The full license text is included in fonts/LICENSE.txt.\n\nCreative Commons license badges (img/licenses.gif) are trademarks of Creative Commons (https://creativecommons.org) and are used under their trademark policy (https://creativecommons.org/policies/). They are not covered by this style's CC BY-SA license."
       }
     },
     {
@@ -355,7 +435,11 @@
       "dir": "reference/themes/official/universal",
       "files": [
         "config.xml",
+        "fonts/Atkinson-Hyperlegible-Bold-102a.woff2",
+        "fonts/Atkinson-Hyperlegible-BoldItalic-102a.woff2",
+        "fonts/Atkinson-Hyperlegible-Italic-102a.woff2",
         "fonts/Atkinson-Hyperlegible-Regular-102a.woff2",
+        "fonts/OFL.txt",
         "icons/emociones.svg",
         "icons/udl_eng_aprenderaprender.svg",
         "icons/udl_eng_culturales.svg",
@@ -451,10 +535,10 @@
       "meta": {
         "name": "universal",
         "title": "Universal",
-        "version": "2025",
-        "compatibility": "3.0",
+        "version": "20260913",
+        "compatibility": "4.0.5",
         "author": "EducaMadrid",
-        "description": "A web-accessibility–focused style for eXeLearning 4 designed to be compatible with Universal Design for Learning (UDL) principles. Created by Ignacio Gros for EducaMadrid.\n\niDevice icons: \"EducaAnd Escolares\" style, by Consejería de Educación y Deporte (https://moocedu.juntadeandalucia.es/) for eXeLearning (http://exelearning.net/), cofinanced by FEDER funds.\n\nAtkinson Hyperlegible Font, licensed under the SIL Open Font License, Version 1.1 (https://openfontlicense.org/open-font-license-official-text/). Copyright: Braille Institute of America, Inc. (https://www.brailleinstitute.org/freefont).\n\nNavigation icons by Google (https://fonts.google.com/icons), under the 2.0 version of the Apache License (https://www.apache.org/licenses/LICENSE-2.0.html)."
+        "description": "A web-accessibility–focused style for eXeLearning 4 designed to be compatible with Universal Design for Learning (UDL) principles. Created by Ignacio Gros for EducaMadrid.\n\niDevice icons: \"EducaAnd Escolares\" style, by Consejería de Educación y Deporte (https://moocedu.juntadeandalucia.es/) for eXeLearning (http://exelearning.net/), cofinanced by FEDER funds.\n\nAtkinson Hyperlegible Font, licensed under the SIL Open Font License, Version 1.1 (https://openfontlicense.org/open-font-license-official-text/). Copyright: Braille Institute of America, Inc. (https://www.brailleinstitute.org/freefont). The full license text is included in fonts/OFL.txt.\n\nNavigation icons by Google (https://fonts.google.com/icons), under the 2.0 version of the Apache License (https://www.apache.org/licenses/LICENSE-2.0.html).\n\nLicense badges (img/licenses.gif): Creative Commons license buttons, by Creative Commons (https://creativecommons.org/). The Creative Commons name, logo and license buttons are trademarks of Creative Commons and are not covered by this style's license; their use is subject to the Creative Commons trademark policy (https://creativecommons.org/policies/)."
       }
     },
     {
@@ -462,14 +546,11 @@
       "dir": "reference/themes/official/zen",
       "files": [
         "config.xml",
-        "fonts/Inter-Bold.woff",
         "fonts/Inter-Bold.woff2",
-        "fonts/Inter-BoldItalic.woff",
         "fonts/Inter-BoldItalic.woff2",
-        "fonts/Inter-Italic.woff",
         "fonts/Inter-Italic.woff2",
-        "fonts/Inter-Regular.woff",
         "fonts/Inter-Regular.woff2",
+        "fonts/OFL.txt",
         "icons/activity.svg",
         "icons/agreement.svg",
         "icons/alert.svg",
@@ -497,6 +578,7 @@
         "icons/info.svg",
         "icons/interactive.svg",
         "icons/letters.svg",
+        "icons/LICENSE.txt",
         "icons/listen.svg",
         "icons/math.svg",
         "icons/music.svg",
@@ -545,10 +627,10 @@
       "meta": {
         "name": "zen",
         "title": "Zen",
-        "version": "2025",
-        "compatibility": "3.0",
+        "version": "20260913",
+        "compatibility": "4.0.5",
         "author": "3ipunt for eXeLearning.net",
-        "description": "Equilibrio y claridad.\n\niDevice icons by Google (https://fonts.google.com/icons), under the 2.0 version of the Apache License (https://www.apache.org/licenses/LICENSE-2.0.html).\n\nInter Font, by Rasmus Andersson, under the SIL Open Font License, Version 1.1. Copyright (c) 2016-2020 The Inter Project Authors (https://github.com/rsms/inter)."
+        "description": "Equilibrio y claridad.\n\niDevice icons by Google (Material Symbols, https://fonts.google.com/icons), under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0). The full license text is included in icons/LICENSE.txt.\n\nInter Font, designed by Rasmus Andersson, under the SIL Open Font License, Version 1.1. Copyright 2016-2020 The Inter Project Authors (https://github.com/rsms/inter). The full license text is included in fonts/OFL.txt.\n\nCreative Commons license badges (img/licenses.gif) are trademarks of Creative Commons (https://creativecommons.org) and are used under their trademark policy (https://creativecommons.org/policies/). They are not covered by this style's CC BY-SA license."
       }
     }
   ]

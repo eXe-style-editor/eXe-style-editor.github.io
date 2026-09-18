@@ -4,7 +4,7 @@ Editor web para crear, ajustar y exportar estilos (`.zip`) compatibles con eXeLe
 
 Versión actual: `v 2.0.5`
 
-Recursos y plantillas oficiales de eXeLearning: `4.0.3`.
+Recursos y plantillas oficiales de eXeLearning: `4.0.5`.
 
 ## Qué hace
 
@@ -47,6 +47,17 @@ Recursos y plantillas oficiales de eXeLearning: `4.0.3`.
 
 ## Notas de compatibilidad
 
+- Los estilos creados con versiones anteriores de eXeLearning se siguen
+  abriendo y editando aquí. El editor usa el motor oficial de eXeLearning, que
+  mantiene la compatibilidad hacia atrás, y no convierte ni reescribe nada por
+  su cuenta al cargar un estilo antiguo.
+- El campo **Compatibilidad** de un estilo indica la versión de eXeLearning con
+  la que se generó, no un requisito mínimo. Un estilo marcado como `3.0` sigue
+  funcionando con el motor actual.
+- Desde la versión 4.0.5, el paquete estático oficial ya no publica los
+  bundles como archivos `.zip`, solo su manifest. El script de sincronización
+  los reconstruye a partir de ese manifest y admite los dos formatos, de modo
+  que también puede sincronizarse una versión anterior.
 - La validación final conviene hacerla en eXeLearning solo si modificas `config.xml` o usas características dependientes del entorno (SCORM, interactividades).
 - Si `downloadable=0`, el estilo se puede editar aquí, pero no será importable desde la interfaz de eXe.
 - En temas con varios `.css` o varios `.js` en raíz, el editor los conserva, pero los ajustes rápidos escriben sobre `style.css`.

@@ -58,6 +58,28 @@ El script copia:
 - `public/bundles/`
 - `public/files/perm/themes/base/`
 
+## Bundles reconstruidos desde el manifest
+
+Hasta la 4.0.3, el paquete estático traía los bundles ya empaquetados
+(`bundles/common.zip`, `bundles/idevices.zip`, `bundles/libs.zip`,
+`bundles/content-css.zip` y `bundles/themes/*.zip`). Desde la 4.0.5 solo viaja
+`bundles/manifest.json`, y es la propia aplicación de eXeLearning la que
+comprime esos archivos cuando hace falta.
+
+El manifest incluye una sección `staticFiles` que relaciona cada archivo del
+paquete (`s`, relativo a `static/`) con la ruta que le corresponde dentro del
+sitio exportado (`t`). `scripts/build-bundles-from-manifest.mjs` recorre esa
+sección y reconstruye los mismos `.zip` que el editor espera, con idéntica
+estructura interna: un zip por plantilla, uno de iDevices donde cada entrada
+lleva delante el nombre de su iDevice, y los de `libs`, `common` y
+`content-css`. Al terminar comprueba el número de archivos de cada bundle
+contra el que declara el manifest.
+
+`scripts/sync-exe-bundles.sh` elige solo el camino: si el origen trae los
+`.zip`, los copia como siempre; si no, los reconstruye. Los dos formatos
+siguen admitidos, de modo que también puede sincronizarse una release anterior
+o una instantánea de `main`. La reconstrucción necesita el comando `zip`.
+
 Despues genera `app/exe-runtime/manifest.json` con el origen usado
 (`release` o `main`), release o rama, commit, version, fecha UTC y hashes
 SHA-256 de los archivos copiados.
@@ -147,6 +169,53 @@ por hecho que los estilos antiguos funcionarán. Antes de publicar esa release:
 Esta es la política para futuras rupturas, no una función de detección o un
 selector de versiones ya implementados. El editor sigue usando un único
 conjunto de recursos mientras no se necesite esa separación.
+
+### Revisión de 4.0.3 a 4.0.5 (2026-09-18)
+
+- Recursos obtenidos de la release oficial `v4.0.5`, publicada el 2026-09-16,
+  mediante `scripts/sync-exe-bundles.sh`.
+- Cambia el empaquetado, no el formato de los proyectos: la release ya no trae
+  los bundles en `.zip` y ahora se reconstruyen desde `bundles/manifest.json`
+  (ver «Bundles reconstruidos desde el manifest»). El editor y su adaptador no
+  se han tocado, porque siguen recibiendo los mismos archivos de siempre.
+- Las plantillas conservan su estructura de entrada. Se suma una séptima
+  plantilla oficial, `educablue` (EducaMadrid), y las demás actualizan sus
+  metadatos, declaran `compatibility` `4.0.5` y cambian sus fuentes de `.woff`
+  a `.woff2`. No se ha identificado una ruptura que obligue a separar familias.
+- Comprobados los 551 archivos del manifest, la igualdad de las dos copias de
+  plantillas y las siete entradas del catálogo. Cada bundle reconstruido
+  coincide en número de archivos con lo que declara el manifest.
+- Pruebas en Chromium y Firefox: carga del editor sin errores JavaScript,
+  importación del ELPX de ejemplo de seis páginas, previsualización correcta
+  con las siete plantillas, exportación del ZIP del estilo (67 archivos) y
+  guardado del ELPX con el estilo modificado.
+- Durante estas pruebas aparecieron tres defectos anteriores a la 4.0.5, ya
+  corregidos:
+  - Con la plantilla `universal`, la previsualización registraba un 404 por
+    `theme/icons/book.png` y `theme/icons/guide.png`. No es un fallo del
+    editor: un proyecto guarda el icono de cada bloque como un nombre
+    (`book`), y `universal` trae un juego de iconos propio que no incluye los
+    que comparten las otras plantillas. El exportador de eXeLearning escribe
+    entonces `<img src="theme/icons/book.png" alt="">` y el bloque queda sin
+    icono, también en el programa. El service worker responde ahora con una
+    imagen vacía a los iconos de plantilla que no existen en ninguna
+    extensión: el resultado visual es el mismo y no se registra un error de
+    red. Cualquier otro archivo ausente sigue dando 404.
+  - Al cambiar de plantilla, los archivos sobrantes de la anterior se borraban
+    de la caché antes de recargar la previsualización. La página anterior,
+    todavía en pantalla, podía pedirlos en ese intervalo y daban 404
+    (`theme/img/menu_open.svg` y similares al pasar de `nova` a `universal`).
+    Ahora se escribe la plantilla nueva, se recarga y solo entonces se purga.
+  - El selector de plantillas estaba activo mientras se cargaba el ELPX de
+    ejemplo. Elegir una plantilla en ese intervalo solapaba las dos
+    operaciones: 404 de `content/css/base.css` y, al terminar la carga, la
+    plantilla elegida quedaba pisada. Los controles de «Cargar plantilla» se
+    desactivan mientras dura la carga de un ELPX, y se reactivan aunque falle.
+- Pendiente: el ejemplo en inglés (`assets/manual_edex_en.elpx`) se ve con la
+  barra superior descolocada al aplicarle `educablue`, en cualquier navegador.
+  Los ejemplos en español y catalán se ven bien. En el formato «Sitio web» el
+  editor muestra el HTML que el proyecto trae guardado, y el del ejemplo en
+  inglés procede de una exportación distinta de la de los otros dos.
 
 ### Revisión de 4.0.1 a 4.0.3 (2026-09-05)
 

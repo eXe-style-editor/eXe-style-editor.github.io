@@ -129,9 +129,17 @@ copy_runtime_from_root() {
     echo "Warning: $yjs_source not found; ELPX import will not work in the browser." >&2
   fi
 
-  if [[ -d "$source_root/$bundles_source" ]]; then
+  # Releases up to v4.0.3 ship $bundles_source/*.zip ready to copy. From v4.0.5
+  # on only $bundles_source/manifest.json travels in the release, and the zips
+  # are rebuilt from it. Both layouts stay supported so older releases and
+  # development snapshots can still be synced.
+  if compgen -G "$source_root/$bundles_source/*.zip" > /dev/null; then
     mkdir -p "$RESOURCES_DIR/bundles"
     cp -R "$source_root/$bundles_source/." "$RESOURCES_DIR/bundles/"
+  elif [[ -f "$source_root/$bundles_source/manifest.json" ]]; then
+    need_cmd zip
+    echo "Source ships no bundle zips; rebuilding them from $bundles_source/manifest.json..."
+    node "$SCRIPT_DIR/build-bundles-from-manifest.mjs" "$source_root" "$RESOURCES_DIR/bundles"
   else
     echo "Warning: $bundles_source not found; resource bundles were not copied." >&2
   fi

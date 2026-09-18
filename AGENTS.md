@@ -42,6 +42,12 @@ Prioridad acordada: **compatibilidad real con eXeLearning** y cambios automátic
   - `name`, `title`, `version`, `compatibility`, `author`, `license`, `license-url`, `description`, `downloadable`.
 - Exportación ZIP con validación automática.
 
+## Decisiones de arquitectura (ADR)
+
+- Las decisiones técnicas que condicionan el trabajo futuro se registran en `adr/`, un archivo por decisión, numerado, con contexto, decisión, alternativas descartadas y consecuencias.
+- Se escribe un ADR cuando la decisión condiciona lo que venga después, cuando había una alternativa razonable que se descartó por un motivo que no se ve en el código, o cuando alguien podría deshacerla de buena fe creyendo que mejora algo. No hace falta para un cambio corriente.
+- Antes de modificar algo que un ADR explique, hay que leerlo. Si aun así conviene cambiarlo, se añade un ADR nuevo y el anterior pasa a «Estado: sustituida por NNNN»; los ADR no se reescriben.
+
 ## Reglas de compatibilidad y seguridad
 - Los ajustes rápidos escriben solo dentro del bloque `quick-overrides`.
 - Sanitización automática de selectores inseguros en `quick-overrides`.

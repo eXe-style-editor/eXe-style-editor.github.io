@@ -60,6 +60,9 @@ El script copia:
 
 ## Bundles reconstruidos desde el manifest
 
+El porqué de esta decisión, con las alternativas que se descartaron, está en
+[`adr/0001-bundles-desde-el-manifest.md`](../../adr/0001-bundles-desde-el-manifest.md).
+
 Hasta la 4.0.3, el paquete estático traía los bundles ya empaquetados
 (`bundles/common.zip`, `bundles/idevices.zip`, `bundles/libs.zip`,
 `bundles/content-css.zip` y `bundles/themes/*.zip`). Desde la 4.0.5 solo viaja

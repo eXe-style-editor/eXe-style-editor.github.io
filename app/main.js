@@ -1298,8 +1298,7 @@ async function restoreEditorSnapshot(snapshot) {
   refreshMetaFields();
 
   if (state.elpxMode) {
-    await syncThemeFilesToElpxCache({ replaceTheme: true });
-    reloadElpxPreviewPage();
+    await replaceElpxThemeAndReloadPreview();
     setElpxModeUi();
   }
   renderPreview();
@@ -1847,9 +1846,12 @@ async function writeElpxFileToCache(cache, sessionId, path, bytes) {
   await cache.put(url, response);
 }
 
-async function syncThemeFilesToElpxCache({ replaceTheme = false } = {}) {
-  if (!state.elpxMode || !state.elpxCacheName || !state.elpxSessionId || !("caches" in window)) return;
+// Con `deferPurge`, los archivos que sobran de la plantilla anterior se quitan del
+// proyecto pero no de la caché, y se devuelven para purgarlos más tarde.
+async function syncThemeFilesToElpxCache({ replaceTheme = false, deferPurge = false } = {}) {
+  if (!state.elpxMode || !state.elpxCacheName || !state.elpxSessionId || !("caches" in window)) return [];
   const cache = await window.caches.open(state.elpxCacheName);
+  const stalePaths = [];
   if (replaceTheme) {
     const expected = new Set(
       Array.from(state.files.keys()).map((relPath) => normalizePath(`${state.elpxThemePrefix}${relPath}`))
@@ -1858,7 +1860,8 @@ async function syncThemeFilesToElpxCache({ replaceTheme = false } = {}) {
     for (const fullPath of currentThemePaths) {
       if (expected.has(fullPath)) continue;
       state.elpxFiles.delete(fullPath);
-      await cache.delete(elpxUrlPath(state.elpxSessionId, fullPath), { ignoreSearch: true });
+      if (deferPurge) stalePaths.push(fullPath);
+      else await cache.delete(elpxUrlPath(state.elpxSessionId, fullPath), { ignoreSearch: true });
     }
   }
   for (const [relPath, bytes] of state.files.entries()) {
@@ -1866,6 +1869,29 @@ async function syncThemeFilesToElpxCache({ replaceTheme = false } = {}) {
     state.elpxFiles.set(fullPath, cloneBytes(bytes));
     await writeElpxFileToCache(cache, state.elpxSessionId, fullPath, bytes);
   }
+  return stalePaths;
+}
+
+// Cambio completo de plantilla sobre un ELPX cargado. El orden importa en los dos
+// sentidos. La página anterior sigue en pantalla hasta que carga la nueva y puede
+// volver a pedir imágenes de su plantilla (las respuestas van con `no-store`), así
+// que purgar los sobrantes al principio, antes de escribir la plantilla nueva, deja
+// un intervalo largo de 404. Pero tampoco pueden quedarse hasta después de la
+// recarga: el HTML pide los iconos por una ruta fija (`theme/icons/book.png`) y, si
+// el archivo de la plantilla anterior sigue ahí, se sirve ese en lugar del
+// equivalente de la nueva (`book.svg`). Por eso: escribir, purgar de una vez y
+// recargar justo después.
+async function replaceElpxThemeAndReloadPreview() {
+  const cacheName = state.elpxCacheName;
+  const sessionId = state.elpxSessionId;
+  const stalePaths = await syncThemeFilesToElpxCache({ replaceTheme: true, deferPurge: true });
+  if (stalePaths.length && state.elpxCacheName === cacheName && state.elpxSessionId === sessionId) {
+    const cache = await window.caches.open(cacheName);
+    await Promise.all(
+      stalePaths.map((fullPath) => cache.delete(elpxUrlPath(sessionId, fullPath), { ignoreSearch: true }))
+    );
+  }
+  reloadElpxPreviewPage();
 }
 
 function scheduleElpxThemeSync() {
@@ -6408,8 +6434,7 @@ async function loadOfficialStyle(styleId, { showStatus = true, resetFileFilter =
   warnIfNotDownloadable("estilo");
   if (applyOverLoadedElpx) {
     state.elpxThemeFiles = new Set(state.files.keys());
-    await syncThemeFilesToElpxCache({ replaceTheme: true });
-    reloadElpxPreviewPage();
+    await replaceElpxThemeAndReloadPreview();
     setElpxModeUi();
   }
   renderPreview();
@@ -6497,8 +6522,7 @@ async function loadZip(file) {
   warnIfNotDownloadable("ZIP");
   if (applyOverLoadedElpx) {
     state.elpxThemeFiles = new Set(state.files.keys());
-    await syncThemeFilesToElpxCache({ replaceTheme: true });
-    reloadElpxPreviewPage();
+    await replaceElpxThemeAndReloadPreview();
     setElpxModeUi();
   }
   renderPreview();
@@ -6523,7 +6547,28 @@ async function loadZip(file) {
   }
 }
 
+// Cargar un ELPX vacía la caché de la previsualización y la reescribe archivo a
+// archivo, lo que tarda uno o dos segundos. Si en ese intervalo se elige otra
+// plantilla o se carga otro archivo, las dos operaciones se solapan: la
+// previsualización pide recursos que aún no están (404) y la carga, al terminar,
+// pisa la plantilla recién elegida. Mientras dura, los controles de «Cargar
+// plantilla» quedan desactivados.
+function setElpxLoadControlsDisabled(disabled) {
+  for (const control of [els.officialStyleSelect, els.elpxPickBtn, els.zipPickBtn]) {
+    if (control) control.disabled = disabled;
+  }
+}
+
 async function loadElpx(file) {
+  setElpxLoadControlsDisabled(true);
+  try {
+    await loadElpxUnlocked(file);
+  } finally {
+    setElpxLoadControlsDisabled(false);
+  }
+}
+
+async function loadElpxUnlocked(file) {
   await registerElpxServiceWorkerIfNeeded();
   await deactivateElpxMode({ resetFrame: false });
 
@@ -8076,8 +8121,18 @@ async function loadRuntimeSourceBadge() {
 
 async function loadDefaultBootElpx() {
   const url = defaultBootElpxUrl();
-  const response = await fetch(url, { cache: "no-store" });
+  // La descarga del ejemplo también cuenta como carga en curso: sin esto, el
+  // selector de plantillas estaría activo hasta que loadElpx() lo desactivase.
+  setElpxLoadControlsDisabled(true);
+  let response;
+  try {
+    response = await fetch(url, { cache: "no-store" });
+  } catch (err) {
+    setElpxLoadControlsDisabled(false);
+    throw err;
+  }
   if (!response.ok) {
+    setElpxLoadControlsDisabled(false);
     throw new Error(`No se pudo cargar ${url} (${response.status})`);
   }
   const blob = await response.blob();

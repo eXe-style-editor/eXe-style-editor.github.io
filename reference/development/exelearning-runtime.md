@@ -202,20 +202,26 @@ conjunto de recursos mientras no se necesite esa separación.
     extensión: el resultado visual es el mismo y no se registra un error de
     red. Cualquier otro archivo ausente sigue dando 404.
   - Al cambiar de plantilla, los archivos sobrantes de la anterior se borraban
-    de la caché antes de recargar la previsualización. La página anterior,
-    todavía en pantalla, podía pedirlos en ese intervalo y daban 404
+    de la caché al principio, antes de escribir la nueva. La página anterior,
+    todavía en pantalla, podía pedirlos durante todo ese intervalo y daban 404
     (`theme/img/menu_open.svg` y similares al pasar de `nova` a `universal`).
-    Ahora se escribe la plantilla nueva, se recarga y solo entonces se purga.
+    Ahora se escribe la plantilla nueva, se purgan los sobrantes de una vez y
+    se recarga justo después. La purga no puede aplazarse hasta después de la
+    recarga: el HTML pide los iconos por una ruta fija
+    (`theme/icons/book.png`) y, si el archivo de la plantilla anterior sigue
+    en la caché, se sirve ese en lugar del equivalente de la nueva
+    (`book.svg`). Queda un intervalo muy breve en el que la página saliente
+    puede registrar algún 404 en la consola, sin efecto en lo que se ve.
   - El selector de plantillas estaba activo mientras se cargaba el ELPX de
     ejemplo. Elegir una plantilla en ese intervalo solapaba las dos
     operaciones: 404 de `content/css/base.css` y, al terminar la carga, la
     plantilla elegida quedaba pisada. Los controles de «Cargar plantilla» se
     desactivan mientras dura la carga de un ELPX, y se reactivan aunque falle.
-- Pendiente: el ejemplo en inglés (`assets/manual_edex_en.elpx`) se ve con la
-  barra superior descolocada al aplicarle `educablue`, en cualquier navegador.
-  Los ejemplos en español y catalán se ven bien. En el formato «Sitio web» el
-  editor muestra el HTML que el proyecto trae guardado, y el del ejemplo en
-  inglés procede de una exportación distinta de la de los otros dos.
+- El ejemplo en inglés (`assets/manual_edex_en.elpx`) se veía con la barra
+  superior descolocada al aplicarle `educablue`, en cualquier navegador. En el
+  formato «Sitio web» el editor muestra el HTML que el proyecto trae guardado,
+  y el de ese ejemplo procedía de una exportación distinta de la de los otros
+  dos. Se ha vuelto a guardar con eXeLearning 4.0.5 y se ve bien.
 
 ### Revisión de 4.0.1 a 4.0.3 (2026-09-05)
 

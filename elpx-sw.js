@@ -24,6 +24,15 @@ self.addEventListener("fetch", (event) => {
       // before giving up, so the preview matches real eXeLearning rendering.
       return matchAlternateExtension(url, request).then((alternate) => {
         if (alternate) return alternate;
+        // A project stores the icon of each block as a bare name ("book"), and
+        // not every theme ships every name: "universal" has its own icon set
+        // and lacks the ones the other official themes share. eXeLearning then
+        // exports <img src="theme/icons/book.png" alt=""> and the block simply
+        // shows no icon. Answer with an empty image so the preview looks the
+        // same without logging a network error for something that is not a
+        // fault of the style being edited. Only theme icons get this: any
+        // other missing file still fails, because that is a real problem.
+        if (isThemeIconPath(url.pathname)) return emptyIconResponse();
         return new Response("ELPX resource not found", { status: 404, statusText: "Not Found" });
       });
     })
@@ -31,6 +40,21 @@ self.addEventListener("fetch", (event) => {
 });
 
 const IMAGE_EXTENSION_FALLBACKS = [".png", ".svg", ".webp", ".jpg", ".jpeg", ".gif"];
+
+function isThemeIconPath(pathname) {
+  return /\/theme\/icons\/[^/]+\.(?:png|svg|webp|jpe?g|gif)$/i.test(pathname);
+}
+
+function emptyIconResponse() {
+  return new Response('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>', {
+    status: 200,
+    headers: {
+      "Content-Type": "image/svg+xml",
+      "Cache-Control": "no-store",
+      "X-EdEX-Missing-Icon": "1"
+    }
+  });
+}
 
 function matchAlternateExtension(url, request) {
   const dot = url.pathname.lastIndexOf(".");

@@ -160,6 +160,17 @@ copy_runtime_from_root() {
   else
     echo "Warning: $scorm_source not found; SCORM export may be incomplete." >&2
   fi
+
+  # Pre-translated common_i18n.<lang>.js files, next to the SCORM folder. The
+  # exporters write the one for the project's language as libs/common_i18n.js.
+  local i18n_source
+  i18n_source="$(dirname "$scorm_source")/i18n"
+  if compgen -G "$source_root/$i18n_source/common_i18n.*.js" > /dev/null; then
+    mkdir -p "$RESOURCES_DIR/common/i18n"
+    cp "$source_root/$i18n_source/"common_i18n.*.js "$RESOURCES_DIR/common/i18n/"
+  else
+    echo "Warning: $i18n_source not found; exported pages will lack common_i18n.js." >&2
+  fi
 }
 
 write_runtime_manifest() {

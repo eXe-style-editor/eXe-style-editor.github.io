@@ -502,7 +502,14 @@ class LocalResourceFetcher {
     return new Map();
   }
 
-  async fetchI18nFile() {
+  async fetchI18nFile(language) {
+    // Same lookup as eXeLearning's ResourceFetcher: the file for the base
+    // language, falling back to English.
+    const lang = String(language || "en").split("-")[0];
+    for (const code of lang === "en" ? ["en"] : [lang, "en"]) {
+      const response = await fetch(runtimeUrl(`resources/common/i18n/common_i18n.${encodeURIComponent(code)}.js`));
+      if (response.ok) return response.text();
+    }
     return null;
   }
 

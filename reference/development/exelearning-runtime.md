@@ -57,6 +57,11 @@ El script copia:
 - `public/app/yjs/exporters.bundle.js`
 - `public/bundles/`
 - `public/files/perm/themes/base/`
+- `public/app/common/scorm/` (los dos archivos SCORM)
+- `public/app/common/i18n/common_i18n.*.js`: textos comunes ya traducidos.
+  Los exportadores escriben el del idioma del proyecto como
+  `libs/common_i18n.js`, y el adaptador lo busca igual que eXeLearning: el del
+  idioma base y, si no existe, el inglés.
 
 ## Bundles reconstruidos desde el manifest
 
@@ -172,6 +177,39 @@ por hecho que los estilos antiguos funcionarán. Antes de publicar esa release:
 Esta es la política para futuras rupturas, no una función de detección o un
 selector de versiones ya implementados. El editor sigue usando un único
 conjunto de recursos mientras no se necesite esa separación.
+
+### Revisión de 4.0.5 a 4.0.6 (2026-10-29)
+
+- Recursos obtenidos de la release oficial `v4.0.6`, publicada el 2026-10-29,
+  mediante `scripts/sync-exe-bundles.sh`.
+- Se suman cuatro plantillas oficiales: `cedec`, `etwinning`, `intef` y
+  `kids`, con la misma estructura de entrada que las demás (`config.xml`,
+  `style.css`, `style.js`, `icons/`, `img/`, `fonts/`). Su `description`
+  declara los logotipos institucionales como «todos los derechos reservados»,
+  y su `style.js` solo los muestra en el dominio de la institución (interruptor
+  `logos`); en el editor, por tanto, no aparecen. `neo`, `nova`, `universal` y
+  `zen` cambian la forma de ocultar textos accesibles; `config.xml` no cambia
+  de formato y todas siguen declarando `compatibility` `4.0.5`. No se ha
+  identificado una ruptura que obligue a separar familias.
+- Pruebas en Chromium y Firefox: las once plantillas cargan y se previsualizan
+  sin errores propios; con `kids` e `intef`, un ajuste rápido de color se
+  aplica en Sitio web, Página única y SCORM 1.2, y se exportan el ZIP del
+  estilo (con `quick-overrides` y la descripción original) y el ELPX. Un estilo
+  personalizado hecho con la 4.0.5 (`consola`) se importa, conserva su CSS e
+  incorpora el ajuste. Los únicos 404 son los de la página saliente al cambiar
+  de plantilla, ya descritos en el ADR 0002.
+- Defecto anterior a la 4.0.6, corregido: `fetchI18nFile` devolvía `null` y
+  las vistas Página única y SCORM recibían un `libs/common_i18n.js` vacío, con
+  el error `$exe_i18n is not defined` en `idevices/text/text.js`. El script
+  copia ahora `app/common/i18n/` y el adaptador sirve el archivo del idioma.
+- Queda un aviso en consola en Página única, `MathJax v3 typeset error`, que
+  procede de `common.js` de eXeLearning (el crucigrama pide componer fórmulas
+  antes de que MathJax se haya cargado); lo captura el propio eXeLearning y no
+  tiene efecto visible. Ocurría igual con la 4.0.5.
+- Los botones de navegación de la previsualización siguen en inglés
+  («Previous», «Next») aunque el proyecto esté en otro idioma: eXeLearning
+  toma esas etiquetas de su API de traducciones o de `data/bundle.json.zst`,
+  que el editor no carga (`fetchI18nTranslations` devuelve `{}`).
 
 ### Revisión de 4.0.3 a 4.0.5 (2026-09-18)
 

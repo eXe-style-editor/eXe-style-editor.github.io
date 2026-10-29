@@ -220,9 +220,16 @@ conjunto de recursos mientras no se necesite esa separación.
 - Defecto anterior a la 4.0.6, corregido: `fetchI18nTranslations` devolvía
   `{}` y los botones de navegación, el pie y la licencia salían en inglés en lo
   que genera el motor. Ahora carga la tabla del idioma del proyecto, extraída
-  de `data/bundle.json.zst`. En el formato «Sitio web» con los ejemplos que
-  trae el editor se sigue viendo «Next»: ahí se muestra el HTML guardado dentro
-  del propio ELPX de ejemplo, que se exportó así.
+  de `data/bundle.json.zst`.
+- Los tres ELPX de ejemplo (`assets/manual_edex_*.elpx`) se han vuelto a
+  generar con la orden oficial de eXeLearning 4.0.6
+  (`bun run dist/cli.js elp:export <entrada> <salida> elpx`, desde un clon de
+  la etiqueta `v4.0.6` con `bun run build:all`). En «Sitio web» el editor
+  muestra el HTML guardado dentro del ELPX, y el que traían estaba desfasado
+  respecto a su `content.xml`: botones en inglés, textos antiguos en el
+  español y «6 páginas» en el catalán, que tiene 5. El contenido no cambia; el
+  catalán pierde restos que no usaba (archivos del crucigrama y una copia de
+  sí mismo) y pasa de 1,1 MB a 0,35 MB.
 
 ### Revisión de 4.0.3 a 4.0.5 (2026-09-18)
 

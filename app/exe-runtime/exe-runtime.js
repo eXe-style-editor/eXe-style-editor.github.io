@@ -370,6 +370,7 @@ class LocalAssetManager {
 class LocalResourceFetcher {
   constructor() {
     this.zipCache = new Map();
+    this.translationsCache = new Map();
     this.themeFiles = null;
   }
 
@@ -513,8 +514,16 @@ class LocalResourceFetcher {
     return null;
   }
 
-  async fetchI18nTranslations() {
-    return {};
+  async fetchI18nTranslations(language) {
+    // eXeLearning's string table (source → translation) for the base language;
+    // the exporters use it for navigation labels, footer and license name.
+    const lang = String(language || "en").split("-")[0];
+    if (!this.translationsCache.has(lang)) {
+      this.translationsCache.set(lang, fetch(runtimeUrl(`resources/common/i18n/translations/${encodeURIComponent(lang)}.json`))
+        .then((response) => (response.ok ? response.json() : {}))
+        .catch(() => ({})));
+    }
+    return this.translationsCache.get(lang);
   }
 }
 

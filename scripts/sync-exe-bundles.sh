@@ -32,6 +32,7 @@ VENDOR_DIR="$RUNTIME_DIR/vendor"
 OFFICIAL_THEMES_DIR="$REPO_ROOT/reference/themes/official"
 OFFICIAL_STYLES_JSON="$REPO_ROOT/app/official-styles.json"
 RUNTIME_SOURCE_JS="$REPO_ROOT/app/runtime-source.js"
+RESTRICTED_JSON=""
 
 FORCE=0
 FROM_MAIN=0
@@ -173,6 +174,55 @@ copy_runtime_from_root() {
   fi
 }
 
+# The exporters translate the navigation buttons, the footer and the license
+# name with eXeLearning's full string table, which the static release ships in
+# data/bundle.json.zst. Keep one JSON per language so the editor only loads the
+# one for the project's language.
+extract_translations() {
+  local bundle_path="$1"
+  local out_dir="$RESOURCES_DIR/common/i18n/translations"
+  if [[ ! -f "$bundle_path" ]]; then
+    echo "Warning: $bundle_path not found; navigation labels will stay in English." >&2
+    return
+  fi
+  node - "$bundle_path" "$out_dir" <<'NODE'
+const fs = require("fs");
+const path = require("path");
+const zlib = require("zlib");
+const [bundlePath, outDir] = process.argv.slice(2);
+if (typeof zlib.zstdDecompressSync !== "function") {
+  throw new Error("This Node.js cannot read zstd; use Node.js 22.15 or later.");
+}
+const data = JSON.parse(zlib.zstdDecompressSync(fs.readFileSync(bundlePath)).toString("utf8"));
+const languages = Object.entries(data.translations || {});
+if (!languages.length) throw new Error(`No translations in ${bundlePath}`);
+fs.mkdirSync(outDir, { recursive: true });
+for (const [lang, entry] of languages) {
+  const table = entry && typeof entry.translations === "object" ? entry.translations : {};
+  fs.writeFileSync(path.join(outDir, `${lang}.json`), JSON.stringify(table));
+}
+console.log(`Extracted translations: ${languages.map(([lang]) => lang).join(", ")}`);
+NODE
+}
+
+# Institutional logos are "all rights reserved": EdEX does not publish them,
+# neither in its copy of the official templates nor in the theme bundles
+# (adr/0004). The list is kept for official-styles.json.
+purge_restricted_files() {
+  RESTRICTED_JSON="$(mktemp)"
+  node "$SCRIPT_DIR/restricted-files.mjs" "$OFFICIAL_THEMES_DIR" > "$RESTRICTED_JSON"
+  node -e '
+    const data = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    for (const [id, files] of Object.entries(data)) for (const file of files) console.log(`${id}\t${file}`);
+  ' "$RESTRICTED_JSON" | while IFS=$'\t' read -r id file; do
+    rm -f "$OFFICIAL_THEMES_DIR/$id/$file" "$THEMES_DIR/$id/$file"
+    if [[ -f "$RESOURCES_DIR/bundles/themes/$id.zip" ]]; then
+      zip -q -d "$RESOURCES_DIR/bundles/themes/$id.zip" "$file" > /dev/null || true
+    fi
+    echo "  removed reserved file $id/$file"
+  done
+}
+
 write_runtime_manifest() {
   local source_mode="$1"
   local source_ref="$2"
@@ -260,11 +310,14 @@ NODE
 }
 
 regenerate_official_styles_json() {
-  node - "$OFFICIAL_THEMES_DIR" "$OFFICIAL_STYLES_JSON" <<'NODE'
+  node - "$OFFICIAL_THEMES_DIR" "$OFFICIAL_STYLES_JSON" "$RESTRICTED_JSON" <<'NODE'
 const fs = require("fs");
 const path = require("path");
 
-const [themesRoot, outputPath] = process.argv.slice(2);
+const [themesRoot, outputPath, restrictedPath] = process.argv.slice(2);
+const restricted = restrictedPath && fs.existsSync(restrictedPath)
+  ? JSON.parse(fs.readFileSync(restrictedPath, "utf8"))
+  : {};
 
 function xmlText(xml, tag) {
   const re = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i");
@@ -301,10 +354,12 @@ const styles = fs.readdirSync(themesRoot, { withFileTypes: true })
     const files = listFiles(dir);
     const configPath = path.join(dir, "config.xml");
     const configXml = fs.existsSync(configPath) ? fs.readFileSync(configPath, "utf8") : "";
+    const restrictedFiles = restricted[id] || [];
     return {
       id,
       dir: `reference/themes/official/${id}`,
       files,
+      ...(restrictedFiles.length ? { restrictedFiles } : {}),
       meta: {
         name: xmlText(configXml, "name"),
         title: xmlText(configXml, "title"),
@@ -323,6 +378,7 @@ const manifest = {
 
 fs.writeFileSync(outputPath, `${JSON.stringify(manifest, null, 2)}\n`);
 NODE
+  [[ -n "$RESTRICTED_JSON" ]] && rm -f "$RESTRICTED_JSON"
 }
 
 sync_from_release() {
@@ -375,6 +431,8 @@ sync_from_release() {
     "app/common/scorm" \
     "app/yjs/importers.bundle.js" \
     "app/yjs/exporters.bundle.js"
+  extract_translations "$WORK_DIR/static/data/bundle.json.zst"
+  purge_restricted_files
 
   source_commit="$(resolve_tag_commit "$latest_tag")"
   release_version="${latest_tag#v}"
@@ -422,6 +480,7 @@ sync_from_main() {
     "app/common/scorm" \
     "app/yjs/importers.bundle.js" \
     "app/yjs/exporters.bundle.js"
+  purge_restricted_files
 
   source_commit="$(git -C "$source_repo" rev-parse HEAD)"
   source_version="$(node -e "const p=require(process.argv[1]); process.stdout.write(String(p.version || ''))" "$source_repo/package.json" 2>/dev/null || true)"

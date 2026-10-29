@@ -50,6 +50,7 @@ window.$i18n.es = {
   "status.elpxSaveCancelled": "Guardado de ELPX cancelado. Puedes ajustar más metadatos y volver a intentarlo.",
   "status.officialTemplateAppliedToElpx": "Plantilla oficial aplicada al ELPX actual: {label} ({styleId})",
   "status.officialTemplateLoaded": "Plantilla oficial cargada: {label} ({styleId})",
+  "status.restrictedFilesRemoved": "Se han quitado sus logotipos institucionales, que tienen todos los derechos reservados.",
   "alert.notDownloadableStyle": "Este estilo está marcado como no descargable (downloadable=0).\n\nPuedes editarlo aquí, pero en eXe no se podrá importar desde la interfaz mientras siga en 0.",
   "status.zipAppliedWithIssues": "ZIP aplicado al ELPX con incidencias: {details}",
   "status.zipLoadedWithIssues": "ZIP cargado con incidencias: {details}",

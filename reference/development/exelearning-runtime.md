@@ -62,6 +62,16 @@ El script copia:
   Los exportadores escriben el del idioma del proyecto como
   `libs/common_i18n.js`, y el adaptador lo busca igual que eXeLearning: el del
   idioma base y, si no existe, el inglés.
+- `data/bundle.json.zst` (solo en la release): de él se extrae la tabla de
+  traducciones de cada idioma a `resources/common/i18n/translations/<idioma>.json`
+  (unos 250 KB cada uno; en la red, unos 85 KB comprimidos). Los exportadores
+  la usan para los botones de navegación, el pie y el nombre de la licencia;
+  el adaptador carga solo la del idioma del proyecto. Hace falta Node.js 22.15
+  o posterior para leer zstd.
+
+Después borra los archivos que las plantillas declaran con todos los derechos
+reservados (los logotipos institucionales), según
+[`adr/0004-logotipos-con-derechos-reservados.md`](../../adr/0004-logotipos-con-derechos-reservados.md).
 
 ## Bundles reconstruidos desde el manifest
 
@@ -187,7 +197,8 @@ conjunto de recursos mientras no se necesite esa separación.
   `style.css`, `style.js`, `icons/`, `img/`, `fonts/`). Su `description`
   declara los logotipos institucionales como «todos los derechos reservados»,
   y su `style.js` solo los muestra en el dominio de la institución (interruptor
-  `logos`); en el editor, por tanto, no aparecen. `neo`, `nova`, `universal` y
+  `logos`). El editor no los publica ni los deja pasar a los estilos
+  derivados (ADR 0004). `neo`, `nova`, `universal` y
   `zen` cambian la forma de ocultar textos accesibles; `config.xml` no cambia
   de formato y todas siguen declarando `compatibility` `4.0.5`. No se ha
   identificado una ruptura que obligue a separar familias.
@@ -206,10 +217,12 @@ conjunto de recursos mientras no se necesite esa separación.
   procede de `common.js` de eXeLearning (el crucigrama pide componer fórmulas
   antes de que MathJax se haya cargado); lo captura el propio eXeLearning y no
   tiene efecto visible. Ocurría igual con la 4.0.5.
-- Los botones de navegación de la previsualización siguen en inglés
-  («Previous», «Next») aunque el proyecto esté en otro idioma: eXeLearning
-  toma esas etiquetas de su API de traducciones o de `data/bundle.json.zst`,
-  que el editor no carga (`fetchI18nTranslations` devuelve `{}`).
+- Defecto anterior a la 4.0.6, corregido: `fetchI18nTranslations` devolvía
+  `{}` y los botones de navegación, el pie y la licencia salían en inglés en lo
+  que genera el motor. Ahora carga la tabla del idioma del proyecto, extraída
+  de `data/bundle.json.zst`. En el formato «Sitio web» con los ejemplos que
+  trae el editor se sigue viendo «Next»: ahí se muestra el HTML guardado dentro
+  del propio ELPX de ejemplo, que se exportó así.
 
 ### Revisión de 4.0.3 a 4.0.5 (2026-09-18)
 

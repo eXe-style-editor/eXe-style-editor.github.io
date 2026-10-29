@@ -50,6 +50,7 @@ window.$i18n.en = {
   "status.elpxSaveCancelled": "ELPX save canceled. You can adjust metadata and try again.",
   "status.officialTemplateAppliedToElpx": "Official template applied to current ELPX: {label} ({styleId})",
   "status.officialTemplateLoaded": "Official template loaded: {label} ({styleId})",
+  "status.restrictedFilesRemoved": "Its institutional logos, which are all rights reserved, have been removed.",
   "alert.notDownloadableStyle": "This style is marked as not downloadable (downloadable=0).\n\nYou can edit it here, but eXe won't import it from the interface while it remains 0.",
   "status.zipAppliedWithIssues": "ZIP applied to ELPX with issues: {details}",
   "status.zipLoadedWithIssues": "ZIP loaded with issues: {details}",

@@ -6397,8 +6397,12 @@ async function loadOfficialStyle(styleId, { showStatus = true, resetFileFilter =
   invalidateAllBlobs();
   state.files.clear();
 
+  // Logos and other files the style declares "all rights reserved" never
+  // reach the editor: a derived style must not carry them (adr/0004).
+  const restricted = new Set(style.restrictedFiles || []);
+  const styleFiles = style.files.filter((filePath) => !restricted.has(filePath));
   const fetched = await Promise.all(
-    style.files.map(async (filePath) => {
+    styleFiles.map(async (filePath) => {
       const res = await fetch(`${style.dir}/${filePath}`);
       if (!res.ok) throw new Error(`No se pudo cargar ${style.id}/${filePath}`);
       return [filePath, new Uint8Array(await res.arrayBuffer())];
@@ -6406,6 +6410,7 @@ async function loadOfficialStyle(styleId, { showStatus = true, resetFileFilter =
   );
 
   for (const [filePath, bytes] of fetched) state.files.set(filePath, bytes);
+  if (restricted.size) dropRestrictedReferences();
   if (previousThemeEntries) alignThemeEntriesToTargetNames(previousThemeEntries);
   setThemeEntryPaths(detectThemeEntryPaths(state.files.keys()));
 
@@ -6416,8 +6421,8 @@ async function loadOfficialStyle(styleId, { showStatus = true, resetFileFilter =
     invalidateBlob(cssPath);
   }
 
-  state.templateFiles = new Set(style.files);
-  state.baseFiles = new Set(style.files);
+  state.templateFiles = new Set(styleFiles);
+  state.baseFiles = new Set(styleFiles);
   state.selectedOfficialStyleId = style.id;
   state.officialSourceId = style.id;
   state.previewLayoutMode = "modern";
@@ -6443,11 +6448,37 @@ async function loadOfficialStyle(styleId, { showStatus = true, resetFileFilter =
 
   if (showStatus) {
     const label = style.meta?.title || style.id;
-    setStatus(appendThemeLayoutWarning(
-      applyOverLoadedElpx
-        ? i18nText("status.officialTemplateAppliedToElpx", `Plantilla oficial aplicada al ELPX actual: ${label} (${style.id})`, { label, styleId: style.id })
-        : i18nText("status.officialTemplateLoaded", `Plantilla oficial cargada: ${label} (${style.id})`, { label, styleId: style.id })
-    , state.files.keys()));
+    const loaded = applyOverLoadedElpx
+      ? i18nText("status.officialTemplateAppliedToElpx", `Plantilla oficial aplicada al ELPX actual: ${label} (${style.id})`, { label, styleId: style.id })
+      : i18nText("status.officialTemplateLoaded", `Plantilla oficial cargada: ${label} (${style.id})`, { label, styleId: style.id });
+    const notice = restricted.size
+      ? ` ${i18nText("status.restrictedFilesRemoved", "Se han quitado sus logotipos institucionales, que tienen todos los derechos reservados.")}`
+      : "";
+    setStatus(appendThemeLayoutWarning(`${loaded}${notice}`, state.files.keys()));
+  }
+}
+
+// Turns off the `logos` switch in style.js and removes the description
+// paragraph about the files that were left out.
+function dropRestrictedReferences() {
+  const jsPath = "style.js";
+  if (state.files.has(jsPath)) {
+    const js = decode(state.files.get(jsPath));
+    state.files.set(jsPath, encode(js.replace(
+      /^(\s*logos\s*:\s*)(?:\[[^\]]*\]|'[^']*'|"[^"]*"|true|false)/m,
+      "$1false"
+    )));
+  }
+  if (state.files.has("config.xml")) {
+    const xml = decode(state.files.get("config.xml"));
+    state.files.set("config.xml", encode(xml.replace(
+      /(<description>)([\s\S]*?)(<\/description>)/i,
+      (match, open, text, close) => open + text
+        .split(/\n\s*\n/)
+        .filter((block) => !/ALL RIGHTS RESERVED/i.test(block))
+        .join("\n\n")
+        .trim() + close
+    )));
   }
 }
 

@@ -2,7 +2,7 @@
 
 Editor web para crear, ajustar y exportar estilos (`.zip`) compatibles con eXeLearning.
 
-Versión actual: `v 2.0.7`
+Versión actual: `v 2.0.8`
 
 Recursos y plantillas oficiales de eXeLearning: `4.0.6`.
 
@@ -10,6 +10,9 @@ Recursos y plantillas oficiales de eXeLearning: `4.0.6`.
 
 - Carga estilos oficiales de eXe como base.
 - Carga un estilo desde ZIP.
+- Las plantillas oficiales Cedec, eTwinning, INTEF y Kids se cargan sin sus
+  logotipos institucionales, que tienen todos los derechos reservados y no
+  pueden ir en un estilo propio.
 - Carga proyectos ELPX y permite modificar el estilo embebido.
 - Puede importar muchos estilos legacy de eXe 2.x y convertirlos a un formato moderno editable.
 - Incluye ajustes rápidos seguros (colores, tipografía, menú, iDevices, botones, cabecera, pie, fondo, favicon, logotipo institucional).

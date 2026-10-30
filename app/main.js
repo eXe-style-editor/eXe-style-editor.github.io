@@ -524,9 +524,6 @@ const APP_BASE_PATH = (() => {
 })();
 const ELPX_URL_PREFIX = `${APP_BASE_PATH}__elpx/`;
 const ELPX_CACHE_PREFIX = "editor-estilos:elpx:";
-const ANALYTICS_FALLBACK_ENDPOINT = "https://bilateria.org/app/estadistica/editor-estilos/track.php";
-const ANALYTICS_FALLBACK_STATS_URL = "https://bilateria.org/app/estadistica/editor-estilos/admin-stats.php";
-const ANALYTICS_VISIT_COOLDOWN_MS = 30 * 60 * 1000;
 
 function i18nText(key, fallback, params = {}) {
   const i18n = window.EditorI18n;
@@ -544,125 +541,6 @@ function confirmT(key, fallback, params = {}) {
 
 function setStatusT(key, fallback, params = {}) {
   setStatus(i18nText(key, fallback, params));
-}
-
-function getMetaContent(name) {
-  const el = document.querySelector(`meta[name="${name}"]`);
-  const value = el?.getAttribute("content") || "";
-  return String(value).trim();
-}
-
-function getAnalyticsConfig() {
-  return {
-    endpoint: getMetaContent("analytics-endpoint") || ANALYTICS_FALLBACK_ENDPOINT,
-    statsUrl: getMetaContent("analytics-stats-url") || ANALYTICS_FALLBACK_STATS_URL,
-    siteId: getMetaContent("analytics-site-id") || "editor-estilos"
-  };
-}
-
-function getAnalyticsVisitStorageKey(siteId) {
-  return `analytics:last-visit:${siteId}`;
-}
-
-function shouldCountAnalyticsVisit(siteId) {
-  try {
-    const lastVisit = Number.parseInt(window.localStorage.getItem(getAnalyticsVisitStorageKey(siteId)) || "", 10);
-    if (Number.isFinite(lastVisit) && Date.now() - lastVisit < ANALYTICS_VISIT_COOLDOWN_MS) {
-      return false;
-    }
-  } catch {
-    return true;
-  }
-  return true;
-}
-
-function rememberAnalyticsVisit(siteId) {
-  try {
-    window.localStorage.setItem(getAnalyticsVisitStorageKey(siteId), String(Date.now()));
-  } catch {
-    // Ignore storage failures and keep analytics best-effort.
-  }
-}
-
-function shouldTrackAnalytics() {
-  if (window.location.protocol !== "http:" && window.location.protocol !== "https:") return false;
-  const host = String(window.location.hostname || "").toLowerCase();
-  return host !== "localhost" && host !== "127.0.0.1" && host !== "::1" && !host.endsWith(".local");
-}
-
-function loadAnalyticsSummary() {
-  if (!shouldTrackAnalytics()) return;
-  const cfg = getAnalyticsConfig();
-  if (!cfg.endpoint) return;
-
-  const callbackName = `__editorAnalyticsCallback_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
-  const script = document.createElement("script");
-  let settled = false;
-  let timeoutId = 0;
-  const params = new URLSearchParams();
-  const pageUrl = window.location.href;
-  const referrer = document.referrer || "";
-  const pageParams = new URLSearchParams(window.location.search || "");
-  const shouldCountVisit = shouldCountAnalyticsVisit(cfg.siteId);
-
-  params.set("site", cfg.siteId);
-  params.set("callback", callbackName);
-  params.set("page_url", pageUrl);
-  params.set("referrer", referrer);
-  if (!shouldCountVisit) params.set("summary_only", "1");
-  ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"].forEach((key) => {
-    const value = String(pageParams.get(key) || "").trim();
-    if (value) params.set(key, value);
-  });
-
-  const cleanup = () => {
-    if (settled) return;
-    settled = true;
-    if (timeoutId) window.clearTimeout(timeoutId);
-    try {
-      delete window[callbackName];
-    } catch {
-      window[callbackName] = undefined;
-    }
-    script.remove();
-  };
-
-  window[callbackName] = (payload) => {
-    try {
-      if (shouldCountVisit && payload && payload.ok) rememberAnalyticsVisit(cfg.siteId);
-    } finally {
-      cleanup();
-    }
-  };
-
-  script.async = true;
-  script.src = `${cfg.endpoint}${cfg.endpoint.includes("?") ? "&" : "?"}${params.toString()}`;
-  script.onerror = () => {
-    cleanup();
-  };
-  timeoutId = window.setTimeout(cleanup, 4000);
-  document.head.appendChild(script);
-}
-
-function scheduleAnalyticsLoad() {
-  if (!shouldTrackAnalytics()) return;
-  const run = () => window.setTimeout(loadAnalyticsSummary, 0);
-  // Un <script async> inyectado antes de que se dispare «load» retrasa ese
-  // evento hasta que la peticion termina. Si el servidor de estadisticas se
-  // cuelga, «load» no llegaria a dispararse nunca. Por eso se espera siempre
-  // a «load» antes de programar nada.
-  var programar = function () {
-    if (typeof window.requestIdleCallback === "function") {
-      window.requestIdleCallback(run, { timeout: 2500 });
-    } else {
-      window.setTimeout(run, 0);
-    }
-  };
-  if (document.readyState === "complete") {
-    programar();
-    return;
-  }
-  window.addEventListener("load", programar, { once: true });
 }
 
 const FILE_TYPE_OPTIONS = [
@@ -8195,7 +8073,6 @@ async function loadDefaultBootElpx() {
   state.selectedScopes = [...PREVIEW_SCOPE_DEFAULTS];
   state.selectedDevice = PREVIEW_DEVICE_DEFAULT;
   previewSettingsToUI();
-  scheduleAnalyticsLoad();
   try {
     await loadRuntimeSourceBadge();
     await loadOfficialStylesCatalog();

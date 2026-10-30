@@ -90,23 +90,12 @@ python3 -m http.server 8000
 
 Luego abre `http://localhost:8000`.
 
-## Estadísticas de visitas
+## Privacidad
 
-El proyecto incluye una integración mínima con un contador propio alojado en IONOS:
-
-- Resumen visible en el pie: visitas totales y visitas de hoy.
-- Panel privado separado por aplicación.
-- Almacenamiento sin cookies ni IP.
-- Clasificación básica por origen, referrer y campañas UTM.
-
-Los ficheros del backend para esta aplicación están en:
-
-- `analytics/editor-estilos/track.php`
-- `analytics/editor-estilos/admin-stats.php`
-- `analytics/editor-estilos/lib.php`
-- `analytics/editor-estilos/config.sample.php`
-
-El frontend solo intenta registrar visitas cuando la app se sirve por `http` o `https`. En `localhost` no envía eventos.
+Los archivos se procesan en el navegador y no se envían a ningún servidor. La
+aplicación no recoge estadísticas de uso ni usa cookies. Solo descarga de
+cdnjs (Cloudflare) la biblioteca que colorea el código en el editor de
+archivos (`adr/0005`).
 
 ## Autoría y licencia
 

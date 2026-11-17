@@ -70,6 +70,7 @@ Prioridad acordada: **compatibilidad real con eXeLearning** y cambios automátic
 - Aviso superior de “fase de pruebas” al iniciar; al cerrarlo no vuelve a mostrarse (persistencia en `localStorage`).
 - La barra de previsualización debe arrancar siempre con el estado por defecto y en este orden visual: Vista, Formato, Ámbito, Elementos. No guardar ni restaurar en `localStorage` la selección del usuario para Vista, Formato, Ámbito ni Elementos.
 - Pie visible con autoría y licencia AGPLv3.
+- Por debajo de 1100 px de ancho los paneles van uno encima del otro y la página se desplaza: el editor con alto propio y la vista previa con un mínimo de tres cuartos de pantalla. No volver a repartir un alto fijo entre los dos: en el móvil la barra de la vista previa ocupa varias filas y el marco se quedaba en 0 px. Comprobar el alto del marco en móvil, tableta y ventana estrecha.
 
 ## Criterio de calidad
 - Cambios automáticos del programa: siempre seguros.

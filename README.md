@@ -2,7 +2,7 @@
 
 Editor web para crear, ajustar y exportar estilos (`.zip`) compatibles con eXeLearning.
 
-Versión actual: `v 2.0.9`
+Versión actual: `v 2.0.10`
 
 Recursos y plantillas oficiales de eXeLearning: `4.0.6`.
 

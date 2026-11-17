@@ -22,6 +22,7 @@ window.$i18n.es = {
   "choose.style": "Elegir estilo",
   "load.hint": "Puedes aplicar un estilo oficial o importar un ZIP personalizado.",
   "label.officialBase": "Estilo base oficial",
+  "label.officialBaseFromFile": "Estilo del archivo cargado",
   "label.importStyle": "Importar estilo",
   "button.selectZip": "Seleccionar ZIP",
   "section.metaExport": "Información y exportación",

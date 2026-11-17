@@ -2429,6 +2429,17 @@ function getOfficialStyleById(id) {
 function renderOfficialStylesSelect() {
   if (!els.officialStyleSelect) return;
   els.officialStyleSelect.innerHTML = "";
+  // When the style in the editor comes from a ZIP or an ELPX, no official
+  // template is loaded: the selector says so instead of showing the last one
+  // chosen, so that choosing any template (that one too) really loads it.
+  const fromFile = !state.officialSourceId && state.files.size > 0;
+  if (fromFile) {
+    const option = document.createElement("option");
+    option.value = "";
+    option.disabled = true;
+    option.textContent = i18nText("label.officialBaseFromFile", "Estilo del archivo cargado");
+    els.officialStyleSelect.appendChild(option);
+  }
   for (const style of state.officialStyles) {
     const option = document.createElement("option");
     const title = style.meta?.title || style.id;
@@ -2436,8 +2447,9 @@ function renderOfficialStylesSelect() {
     option.textContent = `${title} (${style.id})`;
     els.officialStyleSelect.appendChild(option);
   }
-  if (state.selectedOfficialStyleId) {
-    els.officialStyleSelect.value = state.selectedOfficialStyleId;
+  if (fromFile) els.officialStyleSelect.value = "";
+  else if (state.officialSourceId || state.selectedOfficialStyleId) {
+    els.officialStyleSelect.value = state.officialSourceId || state.selectedOfficialStyleId;
   }
 }
 
@@ -6415,6 +6427,7 @@ async function loadZip(file) {
   state.officialSourceId = "";
   state.activePath = preferredActiveFilePath();
   hideOfficialStylePreview();
+  renderOfficialStylesSelect();
   refreshFileTypeFilterOptions({ forceAll: true });
   renderFileList();
   syncEditorWithActiveFile();
@@ -7538,8 +7551,11 @@ function setupEvents() {
 
   els.officialStyleSelect.addEventListener("change", async () => {
     const nextId = els.officialStyleSelect.value;
-    const previousId = state.selectedOfficialStyleId;
-    if (nextId === previousId) return;
+    // Compare with the template actually loaded, not with the last one chosen:
+    // after loading a ZIP or an ELPX there is none, and choosing the same
+    // template again must load it.
+    const previousId = state.officialSourceId;
+    if (!nextId || nextId === previousId) return;
     if (!confirmDiscardUnsavedChanges("usar otra plantilla oficial")) {
       els.officialStyleSelect.value = previousId;
       renderOfficialStylePreview(previousId);
@@ -7916,6 +7932,7 @@ function setupEvents() {
 
 function refreshI18nDependentUi() {
   loadRuntimeSourceBadge();
+  renderOfficialStylesSelect();
   updateHelpLink();
   applyControlTooltips();
   setDetachedEditorButtonState();
@@ -8030,6 +8047,12 @@ async function loadRuntimeSourceBadge() {
 
 async function loadDefaultBootElpx() {
   const url = defaultBootElpxUrl();
+  // The example only provides the content for the preview. Its style is the
+  // one eXeLearning saved in the file, which can be older than the official
+  // templates in the catalog, so the template is applied on top of it: the
+  // one already in use (when switching language) or the default one.
+  const templateId = state.officialSourceId
+    || (state.officialStyles.some((s) => s.id === "base") ? "base" : state.officialStyles[0]?.id);
   // La descarga del ejemplo también cuenta como carga en curso: sin esto, el
   // selector de plantillas estaría activo hasta que loadElpx() lo desactivase.
   setElpxLoadControlsDisabled(true);
@@ -8050,6 +8073,7 @@ async function loadDefaultBootElpx() {
   setBusyOverlay(true, i18nText("preview.loadingExample", "Cargando ejemplo..."));
   try {
     await loadElpx(file);
+    if (templateId) await loadOfficialStyle(templateId, { showStatus: false });
     state.elpxIsDefaultExample = true;
     if (els.elpxInputName) els.elpxInputName.textContent = i18nText("file.defaultExampleLoaded", `${fileName} (cargado por defecto)`);
     setStatus(i18nText("status.defaultExampleLoaded", "Ejemplo cargado por defecto."));

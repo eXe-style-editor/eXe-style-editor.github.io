@@ -15,7 +15,8 @@ Prioridad acordada: **compatibilidad real con eXeLearning** y cambios automátic
 ## Estado actual
 - App estática: `index.html`, `app/main.js`, `app/styles.css`.
 - ZIP en cliente con `vendor/jszip.min.js`.
-- Carga inicial automática del estilo oficial `base`.
+- Carga inicial automática del estilo oficial `base` del catálogo, aplicado sobre el ELPX de ejemplo: del ejemplo solo se usa el contenido, no su carpeta `theme/` (`adr/0006`).
+- El selector de plantillas refleja lo cargado (`state.officialSourceId`): con un estilo de ZIP o de ELPX muestra «Estilo del archivo cargado».
 - Previsualización simulada fija en panel derecho (enlaces inactivos para evitar navegación accidental).
 
 ## Estructura relevante

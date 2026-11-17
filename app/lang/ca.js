@@ -22,6 +22,7 @@ window.$i18n.ca = {
   "choose.style": "Triar estil",
   "load.hint": "Pots aplicar un estil oficial o importar un ZIP personalitzat.",
   "label.officialBase": "Estil base oficial",
+  "label.officialBaseFromFile": "Estil del fitxer carregat",
   "label.importStyle": "Importar estil",
   "button.selectZip": "Seleccionar ZIP",
   "section.metaExport": "Informació i exportació",
